@@ -103,12 +103,25 @@ namespace fms {
 
 		return n;
 	}
+	// length alias
 	template<iterable I>
 	inline size_t size(I i, size_t n = 0)
 	{
 		return length(i, n);
 	}
 
+	// last iterable before end
+	template<iterable I>
+	inline I last(I i)
+	{
+		I i_(i);
+
+		while (++i) {
+			++i_;
+		}
+
+		return i_;
+	}
 
 #pragma region array
 
@@ -280,6 +293,7 @@ namespace fms {
 		using value_type = T;
 
 		constant()
+			: t(0)
 		{ }
 		constant(const value_type& t)
 			: t(t)
@@ -360,6 +374,7 @@ namespace fms {
 #pragma endregion constant
 
 #pragma region iota
+
 	template<typename T>
 	class iota {
 		T t, dt;
@@ -644,6 +659,93 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion binop
+
+#pragma region fold
+
+	// right fold using binop
+	template<class Op, iterable I>
+	class fold {
+		using T = typename I::value_type;
+		Op op;
+		I i;
+		T t;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T;
+
+		fold()
+		{ }
+		fold(const Op& op, const I& i, const T& t0)
+			: op(op), i(i), t(t0)
+		{ }
+		fold(const fold&) = default;
+		fold& operator=(const fold&) = default;
+		~fold()
+		{ }
+
+		bool operator==(const fold& f) const
+		{
+			return t == f.t and i == f.i;
+		}
+
+		explicit operator bool() const
+		{
+			return !!i;
+		}
+		value_type operator*() const
+		{
+			return op(t, *i);
+		}
+		fold& operator++()
+		{
+			t = operator*();
+			++i;
+
+			return *this;
+		}
+	};
+	template<iterable I>
+	inline auto sum(const I& i)
+	{
+		return fold(std::plus{}, i, 0);
+	}
+	template<iterable I>
+	inline auto prod(const I& i)
+	{
+		return fold(std::multiplies{}, i, 1);
+	}
+
+#ifdef _DEBUG
+
+	inline bool test_fold()
+	{
+		{
+			fold f(std::plus{}, iota<int>{}, 2);
+			auto f2(f);
+			f = f2;
+			assert(f == f2);
+			assert(!(f2 != f));
+			assert(f);
+			assert(*f == 2 + 0);
+			++f;
+			assert(*f == 2 + 0 + 1);
+			++f;
+			assert(*f == 2 + 0 + 1 + 2);
+		}
+		{
+			auto s = sum(iota<int>(1));
+			assert(1 == *s);
+			s = drop(2, s);
+			assert(1 + 2 + 3 == *s);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion fold
 
 #pragma region take
 
