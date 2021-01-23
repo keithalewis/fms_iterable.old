@@ -1,39 +1,41 @@
 # iterable
 
-Maybe this library should be called `iterabool`.
-
 This header only library uses C++20 to make iterators easier to use by
-adding the member function `explicit operator bool() const`. This is not a new idea.
+adding the member function `explicit operator bool() const` instead of using the STL `end()`
+notion to delimit ranges.
+
+Iterables allow for infinite (lazy) ranges. This is not a new idea.
 Many other languages use something similar, in particular C# where it is used
 to make [`LINQ`](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/)
 the coolest thing since button shoes.
 
-I do a lot of numerical programming and I work very hard to be lazy. Using streams rather
-than arrays makes C++ much more expressive. For example, `sum(epsilon(power(x)/factorial()))`
-computes `exp(x)` to machine precision using exp(x) = &Sigma;<sub>n >= 0</sub> x<sup>n</sup>/n!.
+Using iterables rather than arrays makes C++ more expressive. For example, `sum(epsilon(power(x)/factorial()))`
+computes `exp(x)` to machine precision using exp(_x_) = &Sigma;<sub>_n_ ≥ 0</sub> _x_<sup>_n_</sup>/_n_!.
 
-This library supplies the usual stream functions like `apply`, (right) `fold`, `mask`, and `filter`
-and overloads some operators for syntactic sugar. For example, 
-`mask(apply([](auto i) { return i <= 2; } iota()), iota()))`, or equivalently 
-`filter([](auto i) { return i <= 2; }, iota())`,
-returns the elements `{0, 1, ...}` that are less than or equal to 2. 
-It can also be written `iota() | iota() <= 2` where `|` is read _given_.
+A `C` array can be made into an iterable by supplying its size. The library provides for constant
+iterables and infinite arithmetic sequences called `iota(t = 0, dt = 1)` to generate `{t, t + dt, ...}`.
 
-The global `begin()` and `end()` functions can be
-used with STL routines or in range based for loops. The `end()` function returns
-a class called `empty`. The global function `operator==(const S& s, const empty<S>&)`
-asks if the iterabool `s` is done by calling `!s.operator bool()`.
-Since `empty<S>` publicly inherits from `S` there is no need for `range` library
-gyrations where end sentinals can have a different type than the iterator.
+Overloads for arithmetic operators provide syntactic sugar. 
+For example, `c(a) + c(b) * iota{}` is another way to say `iota(a, b)`. Likewise, `itoa{} * b + a`.
 
-The beauty part of this is asynchronous programming becomes trivial using coroutines.
-If `s` is iterabool then
+The standard stream oriented functors `apply`,  `filter`, and (right) `fold` create new iterables.
+For example `i | i % 2 == 0` is a filter that extracts the even values of `i`. It is equivalent
+to `filter(eq(mod(i,2), c(0), i)`.
+
+Iterables also have `begin()` and `end()` member functions and can be
+used with STL routines or in range based for loops. 
+
+Asynchronous programming becomes trivial using coroutines.
+If `i` is iterable then
 ```
-auto coro(S s) {
-	while (s) {
-		co_yield *s;
-		++s;
+auto coro(I i) 
+{
+	while (i) {
+		co_yield *i;
+		++i;
 	}
 }
 ```
-leverages compiler writers' handiwork to create multitasking code.
+is a generator for the iterable.
+
+As you will see when you peruse the code, most functions involving iterables have a pleasing, natural implmentation.
