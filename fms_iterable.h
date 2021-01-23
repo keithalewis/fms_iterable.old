@@ -362,17 +362,17 @@ namespace fms {
 #pragma region iota
 	template<typename T>
 	class iota {
-		T t;
+		T t, dt;
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
 		using value_type = T;
 
 		iota()
-			: t(0)
+			: t(0), dt(1)
 		{ }
-		iota(const T& t)
-			: t(t)
+		iota(const T& t, T dt = 1)
+			: t(t), dt(dt)
 		{ }
 		iota(const iota&) = default;
 		iota& operator=(const iota&) = default;
@@ -381,7 +381,7 @@ namespace fms {
 
 		bool operator==(const iota& c) const
 		{
-			return t == c.t;
+			return t == c.t and dt == c.dt;
 		}
 		auto begin() const
 		{
@@ -402,7 +402,7 @@ namespace fms {
 		}
 		iota& operator++()
 		{
-			++t;
+			t = t + dt;
 
 			return *this;
 		}
@@ -417,7 +417,7 @@ namespace fms {
 	class apply {
 		using T = typename I::value_type;
 		using U = std::invoke_result_t<F, T>;
-		const F& f;
+		F f;
 		I i;
 	public:
 		using iterator_concept = typename I::iterator_concept;
@@ -434,9 +434,9 @@ namespace fms {
 		~apply()
 		{ }
 
-		bool operator==(const apply& _a) const
+		bool operator==(const apply& a) const
 		{
-			return i == _a.i and f == _a.f;
+			return i == a.i; // f == a.f must be true;
 		}
 		apply begin() const
 		{
@@ -444,12 +444,12 @@ namespace fms {
 		}
 		apply end() const
 		{
-			apply(f, end(i));
+			return apply(f, i.end());
 		}
 
 		explicit operator bool() const
 		{
-			return i;
+			return !!i;
 		}
 		value_type operator*() const
 		{
@@ -462,6 +462,68 @@ namespace fms {
 			return *this;
 		}
 	};
+
+#ifdef _DEBUG
+
+	inline bool test_apply()
+	{
+		{
+			iota<int> i;
+			apply a(std::negate{}, i);
+			auto a2(a);
+			a = a2;
+			assert(a == a2);
+			assert(!(a != a2)); 
+			assert(a);
+			assert(*a == 0);
+			++a;
+			assert(*a == -1);
+		}
+		{
+			iota<int> i;
+			apply a([](int i) { return -i; }, i);
+			auto a2(a);
+			a = a2;
+			assert(a == a2);
+			assert(!(a != a2));
+			assert(a);
+			assert(*a == 0);
+			++a;
+			assert(*a == -1);
+		}
+		{
+			apply a(std::negate{}, iota<int>{});
+			apply b([](int i) { return -i; }, iota<int>{});
+			for (int i : {1, 2, 3}) {
+				assert(*++a == -i); 
+				assert(*++b == -i);
+			}
+		}
+		{
+			apply a(std::negate{}, iota<int>{});
+			int i = 0;
+			for (auto ai = a.begin(); ai != a.end(); ++ai) {
+				assert(*ai == -i);
+				++i;
+				if (i == 3)
+					break;
+			}
+		}
+		{
+			apply a(std::negate{}, iota<int>{});
+			int i = 0;
+			for (auto ai : a) {
+				assert(ai == -i);
+				++i;
+				if (i == 3)
+					break;
+			}
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
 
 #pragma endregion apply
 
@@ -677,4 +739,10 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion take
+}
+
+template<fms::iterable I, fms::iterable J>
+inline auto operator+(const I& i, const J& j)
+{
+	return add(i, j);
 }
