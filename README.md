@@ -18,7 +18,7 @@ iterables and infinite arithmetic sequences called `iota(t = 0, dt = 1)` to gene
 Overloads for arithmetic operators provide syntactic sugar. 
 For example, `c(a) + c(b) * iota{}` is another way to say `iota(a, b)`. Likewise, `itoa{} * b + a`.
 
-The standard stream oriented functors `apply`,  `filter`, and (right) `fold` create new iterables.
+Standard stream oriented functors `apply`,  `filter`, and (right) `fold` create new iterables.
 For example `i | i % 2 == 0` is a filter that extracts the even values of `i`. It is equivalent
 to `filter(eq(mod(i,2), c(0)), i)`.
 
@@ -38,4 +38,4 @@ auto coro(I i)
 ```
 is a generator for the iterable.
 
-As you will see when you peruse the code, most functions involving iterables have a natural and pleasing implmentation.
+As you will see when you peruse the code, most functions involving iterables have a natural and pleasing implementation.
