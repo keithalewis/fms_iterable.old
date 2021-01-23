@@ -410,6 +410,61 @@ namespace fms {
 	};
 #pragma endregion iota
 
+#pragma region apply
+
+	// apply function to sequence
+	template<class F, iterable I> //,
+	class apply {
+		using T = typename I::value_type;
+		using U = std::invoke_result_t<F, T>;
+		const F& f;
+		I i;
+	public:
+		using iterator_concept = typename I::iterator_concept;
+		using iterator_category = typename I::iterator_category;
+		using value_type = typename U;
+
+		apply()
+		{ }
+		apply(const F& f, const I& i)
+			: f(f), i(i)
+		{ }
+		apply(const apply&) = default;
+		apply& operator=(const apply&) = default;
+		~apply()
+		{ }
+
+		bool operator==(const apply& _a) const
+		{
+			return i == _a.i and f == _a.f;
+		}
+		apply begin() const
+		{
+			return *this;
+		}
+		apply end() const
+		{
+			apply(f, end(i));
+		}
+
+		explicit operator bool() const
+		{
+			return i;
+		}
+		value_type operator*() const
+		{
+			return f(*i);
+		}
+		apply& operator++()
+		{
+			++i;
+
+			return *this;
+		}
+	};
+
+#pragma endregion apply
+
 #pragma region binop
 
 	// apply binary operator 
@@ -421,7 +476,7 @@ namespace fms {
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = decltype(op(*i, *j));
+		using value_type = std::invoke_result_t<Op, typename I::value_type, typename J::value_type>;
 
 		binop()
 		{ }
@@ -435,7 +490,7 @@ namespace fms {
 
 		bool operator==(const binop& b) const
 		{
-			return i == b.i and j == b.j;
+			return i == b.i and j == b.j; // op == b.op must be true
 		}
 
 		explicit operator bool() const
@@ -486,12 +541,22 @@ namespace fms {
 		return binop(std::modulus{}, i, j);
 	}
 	// logical_and, ..., bit_and, ...
-
+	
 #ifdef _DEBUG
 
 	template<class T>
 	inline bool test_binop()
 	{
+		{
+			T i[] = { 1,2,3 };
+			auto a = array(i);
+			auto bo = binop(std::equal_to{}, a, a);
+			auto bo2(bo);
+			bo = bo2;
+			assert(bo);
+			assert(size(bo) == 3);
+			assert(all(bo));
+		}
 		{
 			T i[] = { 1,2,3 };
 			auto a = array(i);
@@ -506,8 +571,8 @@ namespace fms {
 			T i[] = { 1,2,3 };
 			auto a = array(i);
 			assert(all(eq(
-				add(a, a), 
-				mul(c(2), iota(1))
+				add(iota(1), a),   // length 3
+				mul(c(2), iota(1)) // length unbounded
 			)));
 		}
 
