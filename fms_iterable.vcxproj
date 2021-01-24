@@ -149,6 +149,7 @@
     <ClCompile Include="fms_iterable.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="NOTES.md" />
     <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

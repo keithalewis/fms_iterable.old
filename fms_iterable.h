@@ -12,18 +12,224 @@
 namespace fms {
 
 	template<class I>
-	concept iterable = requires (I i) {
+	concept iterable = // std::input_or_output_iterator &&
+		requires (I i) {
 		//std::is_base_of_v<std::forward_iterator_tag, typename I::interator_category>;
-		typename I::iterator_concept;
+		//typename I::iterator_concept;
 		typename I::iterator_category;
 		typename I::value_type;
-		{ i.operator bool() } -> std::same_as<bool>;
+		{ !!i /*i.operator bool()*/ } -> std::same_as<bool>;
 		{ *i } -> std::convertible_to<typename I::value_type>;
 		{ ++i } -> std::same_as<I&>;
 		//{ i.operator==(i) const } -> std::same_as<bool>;
 		//{ i.begin() } -> std::same_as<I>;
 		//{ i.end() } -> std::same_as<I>;
 	};
+
+	// "All happy iterables begin alike..."
+	template<iterable I>
+	inline I begin(const I& i)
+	{
+		return i;
+	}
+	// "...but each iterable ends after its own fashion."
+	template<iterable I>
+	inline auto end(const I& i)
+	{
+		return i.end();
+	}
+
+#pragma region constant
+
+	template<typename T>
+	class constant {
+		T t;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T;
+
+		constant()
+		{ }
+		constant(const T& t)
+			: t(t)
+		{ }
+		constant(const constant&) = default;
+		constant& operator=(const constant&) = default;
+		~constant()
+		{ }
+
+		bool operator==(const constant& c) const
+		{
+			return t == c.t;
+		}
+		auto end() const
+		{
+			return constant(std::numeric_limits<T>::max());
+		}
+		
+		explicit operator bool() const
+		{
+			return true;
+		}
+		value_type operator*() const
+		{
+			return t;
+		}
+		constant& operator++()
+		{
+			return *this;
+		}
+	};
+	template<typename T>
+	inline auto c(const T& t)
+	{
+		return constant(t);
+	}
+
+#ifdef _DEBUG
+#include <cassert>
+
+	template<typename T>
+	inline bool test_constant()
+	{
+		{
+			constant<T> c;
+			auto c2 = c;
+			c = c2;
+			assert(c == c2);
+			assert(c2 == c);
+			assert(c);
+			++c;
+			assert(c);
+		}
+		{
+			constant<T> c(1);
+			auto c2 = c;
+			c = c2;
+			assert(c == c2);
+			assert(c2 == c);
+			assert(c);
+			assert(*c == 1);
+			assert(1 == *c);
+			++c;
+			assert(c);
+			assert(*c == 1);
+			assert(1 == *c);
+			assert(begin(c) != end(c));
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion constant
+
+#pragma region iota
+
+	//??? replace by fold(incr, constant(0))
+	template<typename T>
+	class iota {
+		T t;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T;
+
+		iota(T t = 0)
+			: t(t)
+		{ }
+		iota(const iota&) = default;
+		iota& operator=(const iota&) = default;
+		~iota()
+		{ }
+
+		bool operator==(const iota& i) const
+		{
+			return t == i.t;
+		}
+		bool operator!=(const iota& i) const
+		{
+			return !operator==(i);
+		}
+		auto end() const
+		{
+			return iota(std::numeric_limits<T>::max());
+		}
+
+		explicit operator bool() const
+		{
+			return true;
+		}
+		value_type operator*() const
+		{
+			return t;
+		}
+		iota& operator++()
+		{
+			++t;
+
+			return *this;
+		}
+	};
+	
+#pragma endregion iota
+
+#pragma region until
+
+	// stop when end or p(i) is true
+	template<class P, iterable I>
+	class until : public I {
+		P p;
+	public:
+		until()
+		{ }
+		until(P p, const I& i)
+			: p(p), I(i)
+		{ }
+		until(const until&) = default;
+		until& operator=(const until&) = default;
+		~until()
+		{ }
+
+		explicit operator bool() const
+		{
+			return I::operator!=(I::end()) and !p(*this);
+		}
+		auto end() const
+		{
+			return until(p, I::end());
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_until()
+	{
+		{
+			iota<int> i;
+			auto u = until([](auto i) { return *i == 3; }, i);
+			assert(u);
+			auto u2(u);
+			assert(u2);
+			u = u2;
+			assert(u);
+			assert(*u == 0);
+			++u;
+			assert(*u == 1);
+			++u;
+			assert(*u == 2);
+			++u;
+			assert(!u);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion until
 
 #pragma region all
 
@@ -81,7 +287,7 @@ namespace fms {
 #pragma endregion any
 
 	template<iterable I>
-	inline I drop(size_t n, I i)
+	inline I skip(size_t n, I i)
 	{
 		while (n and i) { // !!!specialize for random access
 			--n;
@@ -122,6 +328,43 @@ namespace fms {
 
 		return i_;
 	}
+
+#ifdef _DEBUG
+
+	template<iterable I>
+	inline bool test_last(I i)
+	{
+		{
+			assert(++last(i) == i.end());
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma region sentinal
+
+	template<iterable I>
+	inline auto sentinal(const I& i, const I& e)
+	{
+		return until([e](const I& i) { return i == e; }, i);
+	}
+
+#ifdef _DEBUG
+
+	inline bool test_sentinal()
+	{
+		{
+
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion sentinal
 
 #pragma region array
 
@@ -282,88 +525,79 @@ namespace fms {
 
 #pragma endregion array
 
-#pragma region constant
+#pragma region take
 
-	template<typename T>
-	class constant {
-		T t;
+	// take first n items
+	template<iterable I>
+	class take : public I {
+		size_t n;
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = T;
+		using value_type = typename I::value_type;
 
-		constant()
-			: t(0)
+		take()
+			: n(0)
 		{ }
-		constant(const value_type& t)
-			: t(t)
+		take(size_t n, const I& i)
+			: I(i), n(n)
 		{ }
-		constant(const constant&) = default;
-		constant& operator=(const constant&) = default;
-		~constant()
+		take(const take&) = default;
+		take& operator=(const take&) = default;
+		~take()
 		{ }
 
-		bool operator==(const constant& c) const
+		// remaining size
+		size_t size() const
 		{
-			return t == c.t;
+			return n;
 		}
-		auto begin() const
+
+		bool operator==(const take& i) const
 		{
-			return *this;
+			return n == i.n and I::operator==(i);
 		}
-		auto end() const
+		auto end()
 		{
-			return constant(~t);
+			return take(0, skip(n, *this));
 		}
-		
+
 		explicit operator bool() const
 		{
-			return true;
+			return n != 0;
 		}
-		value_type operator*() const
+		take& operator++()
 		{
-			return t;
-		}
-		constant& operator++()
-		{
+			if (*this) {
+				--n;
+				I::operator++();
+			}
+
 			return *this;
 		}
 	};
-	template<typename T>
-	inline auto c(const T& t)
-	{
-		return constant(t);
-	}
 
 #ifdef _DEBUG
 
 	template<typename T>
-	inline bool test_constant()
+	inline bool test_take()
 	{
 		{
-			constant<T> c;
-			auto c2 = c;
-			c = c2;
-			assert(c == c2);
-			assert(c2 == c);
-			assert(c);
-			++c;
-			assert(c);
-		}
-		{
-			constant<T> c(1);
-			auto c2 = c;
-			c = c2;
-			assert(c == c2);
-			assert(c2 == c);
-			assert(c);
-			assert(*c == 1);
-			assert(1 == *c);
-			++c;
-			assert(c);
-			assert(*c == 1);
-			assert(1 == *c);
-			assert(c.begin() != c.end());
+			auto t = take(2, iota<T>{});
+			auto t2(t);
+			t = t2;
+			assert(t);
+			assert(length(t) == 2);
+			assert(*t == 0);
+			++t;
+
+			assert(t);
+			assert(length(t) == 1);
+			assert(*t == 1);
+			++t;
+
+			assert(!t);
+			assert(size(t) == 0);
 		}
 
 		return true;
@@ -371,59 +605,7 @@ namespace fms {
 
 #endif // _DEBUG
 
-#pragma endregion constant
-
-#pragma region iota
-
-	template<typename T>
-	class iota {
-		T t, dt;
-	public:
-		using iterator_concept = std::forward_iterator_tag;
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = T;
-
-		iota()
-			: t(0), dt(1)
-		{ }
-		iota(const T& t, T dt = 1)
-			: t(t), dt(dt)
-		{ }
-		iota(const iota&) = default;
-		iota& operator=(const iota&) = default;
-		~iota()
-		{ }
-
-		bool operator==(const iota& c) const
-		{
-			return t == c.t and dt == c.dt;
-		}
-		auto begin() const
-		{
-			return *this;
-		}
-		auto end() const
-		{
-			return iota(std::numeric_limits<T>::max());
-		}
-
-		explicit operator bool() const
-		{
-			return true;
-		}
-		value_type operator*() const
-		{
-			return t;
-		}
-		iota& operator++()
-		{
-			t = t + dt;
-
-			return *this;
-		}
-
-	};
-#pragma endregion iota
+#pragma endregion take
 
 #pragma region apply
 
@@ -453,11 +635,7 @@ namespace fms {
 		{
 			return i == a.i; // f == a.f must be true;
 		}
-		apply begin() const
-		{
-			return *this;
-		}
-		apply end() const
+		auto end() const
 		{
 			return apply(f, i.end());
 		}
@@ -477,7 +655,6 @@ namespace fms {
 			return *this;
 		}
 	};
-
 #ifdef _DEBUG
 
 	inline bool test_apply()
@@ -517,7 +694,7 @@ namespace fms {
 		{
 			apply a(std::negate{}, iota<int>{});
 			int i = 0;
-			for (auto ai = a.begin(); ai != a.end(); ++ai) {
+			for (auto ai = begin(a); ai != end(a); ++ai) {
 				assert(*ai == -i);
 				++i;
 				if (i == 3)
@@ -544,7 +721,8 @@ namespace fms {
 
 #pragma region binop
 
-	// apply binary operator 
+	// apply binary operator when both values exist
+	//??? what if length(i) != length(j)
 	template<class Op, iterable I, iterable J>
 	class binop {
 		Op op;
@@ -660,6 +838,76 @@ namespace fms {
 
 #pragma endregion binop
 
+#pragma region concatenate
+
+	template<iterable I, iterable J>
+	class concatenate {
+		I i;
+		J j;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = std::common_type_t<typename I::value_type, typename J::value_type>;
+
+		concatenate()
+		{ }
+		concatenate(const I& i, const J& j)
+			: i(i), j(j)
+		{ }
+		concatenate(const concatenate&) = default;
+		concatenate& operator=(const concatenate&) = default;
+		~concatenate()
+		{ }
+
+		bool operator==(const concatenate& s) const
+		{
+			i == s.i and j == s.j;
+		}
+		explicit operator bool() const
+		{
+			return i or j;
+		}
+		value_type operator*() const
+		{
+			if (i) {
+				return *i;
+			}
+
+			return *j;
+		}
+		concatenate& operator++()
+		{
+			if (i) {
+				++i;
+			}
+			else if (j) {
+				++j;
+			}
+
+			return *this;
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_concatenate()
+	{
+		{
+			auto i = take(2, iota<int>(0));
+			auto j = take(2, iota<int>(2));
+			assert(all(eq(
+				concatenate(i, j),
+				take(4, iota<int>(0))
+			)));
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion concatenate
+
 #pragma region fold
 
 	// right fold using binop
@@ -736,7 +984,7 @@ namespace fms {
 		{
 			auto s = sum(iota<int>(1));
 			assert(1 == *s);
-			s = drop(2, s);
+			s = skip(2, s);
 			assert(1 + 2 + 3 == *s);
 		}
 
@@ -747,104 +995,16 @@ namespace fms {
 
 #pragma endregion fold
 
-#pragma region take
-
-	// take first n items
-	template<iterable I>
-	class take {
-		size_t n;
-		I i;
-	public:
-		using iterator_concept = std::forward_iterator_tag;
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = typename I::value_type;
-
-		take()
-			: n(0)
-		{ }
-		take(size_t n, const I& i)
-			: n(n), i(i)
-		{ }
-		take(const take&) = default;
-		take& operator=(const take&) = default;
-		~take()
-		{ }
-
-		// remaining size
-		size_t size() const
-		{
-			return n;
-		}
-
-		bool operator==(const take & _i) const
-		{
-			return n == _i.n and i == _i.i;
-		}
-		auto begin()
-		{
-			return *this;
-		}
-		auto end()
-		{
-			return drop(n, *this);
-		}
-
-		explicit operator bool() const
-		{
-			return n != 0;
-		}
-		value_type operator*() const
-		{
-			return *i;
-		}
-		/*
-		value_type& operator*()
-		{
-			return *i;
-		}
-		*/
-		take& operator++()
-		{
-			if (*this) {
-				--n;
-				++i;
-			}
-
-			return *this;
-		}
-	};
-
-#ifdef _DEBUG
-
-	template<typename T>
-	inline bool test_take()
-	{
-		{
-			auto t = take(2, iota<T>{});
-			assert(t);
-			assert(length(t) == 2);
-			assert(*t == 0);
-			++t;
-
-			assert(t);
-			assert(length(t) == 1);
-			assert(*t == 1);
-			++t;
-
-			assert(!t);
-			assert(size(t) == 0);
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-#pragma endregion take
 }
 
 template<fms::iterable I, fms::iterable J>
 inline auto operator+(const I& i, const J& j)
 {
 	return add(i, j);
+}
+
+template<fms::iterable I, fms::iterable J>
+inline auto operator,(const I& i, const J& j)
+{
+	return fms::concatenate(i, j);
 }
