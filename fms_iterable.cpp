@@ -45,6 +45,15 @@ int main()
 {
 	iota i0(0), i1(1);
 
+	{
+		auto count = []() { static int i = 0; return i++; };
+		size_t j;
+		j = sizeof(count);
+		j = count();
+		j = count();
+		j = count();
+	}
+
 	auto i = tuple_incr(i0, i1);
 	assert(*i0 == 0);
 	auto i_star = tuple_star(i0, i1);

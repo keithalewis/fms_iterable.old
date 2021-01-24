@@ -1,50 +1,46 @@
 # NOTES
 
+iterable:
+	!!i -> bool, * and ++ permitted
+	*i -> T
+	++i -> I&
+
 Basic operations: 
-	generate(f): void f(void) -> {f(), f(), ...}
-	truncate(p,i): p(i) ? i : end
-	filter(p, i): p(i) ? i : filter(p, ++i)
-	apply: {f(i), f(++i), ...}
-	tuple: {<i, j,...>, <++i, ++j, ...>, ...}
-	join: {i, ++i, ..., j, ++j, }
+	generate(f): 
+		true
+		*i -> f()
+		++i -> noop
 
-template<iterable... is>
-void tuple_incr(iterable&... is)
-{
-	++...is;
-}
+	truncate(p,i):
+		p(i)
+		*i -> *i
+		++i -> ++i
 
-class generate {
-	size_t n;
-	F f;
-	generate(F f)
-		: n(0), f(f)
-	{ }
-	explicit operator bool() const
-	{
-		return true;
-	}
-	value_type operator*() const
-	{
-		return f();
-	}
-	generate& operator++()
-	{
-		++n;
+	filter(p, i):
+		true
+		*i -> *i
+		++ -> while !p(i) ++i
 
-		return *this;
-	}
-}
+	apply: 
+		!!
+		*i -> f(i)
+		++i
 
-template<class T>
-struct count {
-	T t;
-	count(T t) : t(t) { }
-	T operator()()
-	{
-		return t++;
-	}
-}
+	tuple: 
+		!! -> all !!i
+		*i -> <*i>
+		++i -> <++i>
+
+	join: 
+		!!(i,j) -> !!i and !!j
+		*(i,j) -> i ? *i : *j
+		++(i,j) -> i ? (++i,j) : (i, ++j) 
+
+auto count = [](){static i = 0; return i++;};
+auto constant = [k]() { static k0 = k; return k0; }:
+auto incr = [](auto& i) { return ++i; };
+auto boolean [p](const auto& i) { static P p; return p(i); };
+auto value [v](const auto& i) { return v(i); };
 
 template<iterable I, typename... Args>
 inline auto filter(Args&&... args)
