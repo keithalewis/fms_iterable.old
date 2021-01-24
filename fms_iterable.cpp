@@ -32,6 +32,14 @@ inline auto tuple_incr(Is&&... is)
 		std::tuple<Is...>(++is...); //???why is std::tuple needed
 	};
 }
+template<class... Is>
+inline auto tuple_star(Is&&... is)
+{
+	return [...is = std::forward<Is>(is)]() {
+		return std::tuple<decltype(*is)...>(*is...); //???why is std::tuple needed
+	};
+}
+
 
 int main()
 {
@@ -39,6 +47,9 @@ int main()
 
 	auto i = tuple_incr(i0, i1);
 	assert(*i0 == 0);
+	auto i_star = tuple_star(i0, i1);
+	auto i_s = i_star();
+	assert(i_s == std::tuple(*i0, *i1));
 	i();
 	assert(*i0 == 1);
 
