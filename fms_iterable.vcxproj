@@ -145,9 +145,11 @@
   <ItemGroup>
     <ClInclude Include="fms_function.h" />
     <ClInclude Include="fms_iterable.h" />
+    <ClInclude Include="fms_numeric.h" />
     <ClInclude Include="fms_tuple.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="fms_command.cpp" />
     <ClCompile Include="fms_iterable.cpp" />
   </ItemGroup>
   <ItemGroup>

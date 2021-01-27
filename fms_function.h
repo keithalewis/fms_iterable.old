@@ -63,7 +63,7 @@ namespace fms {
 	// STL end
 	//!!! specialize for random access iterable
 	template<iterable I>
-	inline I end(I i)
+	inline I end_(I i)
 	{
 		for (; i; ++i) ; // nothing
 
@@ -77,6 +77,22 @@ namespace fms {
 
 		return i;
 	}
+
+#ifdef _DEBUG
+
+	template<iterable I>
+	inline bool test_last(I i)
+	{
+		{
+			assert(++last(i) == i.end());
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+
 
 
 #pragma endregion any
@@ -106,33 +122,4 @@ namespace fms {
 	{
 		return length(i, n);
 	}
-
-	// last iterable before end
-	template<iterable I>
-	inline I last(I i)
-	{
-		I i_(i);
-
-		while (++i) {
-			++i_;
-		}
-
-		return i_;
-	}
-
-#ifdef _DEBUG
-
-	template<iterable I>
-	inline bool test_last(I i)
-	{
-		{
-			assert(++last(i) == i.end());
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-
 }

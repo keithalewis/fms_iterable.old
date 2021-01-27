@@ -8,22 +8,23 @@ namespace fms {
 	template<class... Is>
 	inline auto tuple_bool(Is&&... is)
 	{
-		return[...is = std::forward<Is>(is)]() {
-			return std::tuple<decltype(*is)...>(*is...); //???why is std::tuple needed
+		return [...is = std::forward<Is>(is)]() -> bool {
+			return ... && is;
 		};
 	}
 	template<class... Is>
 	inline auto tuple_star(Is&&... is)
 	{
-		return[...is = std::forward<Is>(is)]() {
-			return std::tuple<decltype(*is)...>(*is...); //???why is std::tuple needed
+		return [...is = std::forward<Is>(is)]() {
+			return std::tuple<decltype(*is)...>(*is...);
 		};
 	}
 	template<class... Is>
 	inline auto tuple_incr(Is&&... is)
 	{
 		return[&...is = std::forward<Is>(is)]() {
-			std::tuple<Is...>(++is...); //???why is std::tuple needed
+			++is, ...;
+			//std::tuple<Is...>(++is...); //???why is std::tuple needed
 		};
 	}
 
