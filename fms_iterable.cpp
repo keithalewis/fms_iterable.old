@@ -52,11 +52,18 @@ inline auto tuple_star(Is&&... is)
 
 int main()
 {
-	double x = 1;
-	auto xn = power(x) / factorial(0.);
-	double expx = add(epsilon(xn));
-	double ex = exp(x);
-	assert(std::fabs(ex - expx) <= std::numeric_limits<double>::epsilon());
+	constexpr double eps = std::numeric_limits<double>::epsilon();
+	{
+		double x = 1;
+		auto xn = power(x) / factorial(0.);
+		double expx = add(epsilon(xn));
+		double ex = exp(x);
+		assert(std::fabs(ex - expx) <= eps);
+	}
+	{
+		double x = 1;
+		assert(std::fabs(exp(x) - add(epsilon(power(x) / factorial(0.)))) <= eps);
+	}
 
 	return 0;
 }

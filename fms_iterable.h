@@ -496,11 +496,11 @@ namespace fms {
 
 #pragma region scan
 
-	// return {{i}, {i,++i}, ... {i, ++i, , ..., i.end()}
-	template<iterable I, class D = void*>
+	// return {{i}, {i,++i}, ... {i, ++i, , ..., i.end()}}
+	template<iterable I, class N = void*>
 	class scan {
 		I i, e;
-		D next; //?? std::function<void(const I&)>
+		N next; //?? std::function<void(const I&)>
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
