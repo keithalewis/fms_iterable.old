@@ -1,5 +1,7 @@
 # NOTES
 
+Can we may std::function part of the class signature instead of a member?
+
 iterable:
 	!!i -> bool, * and ++ permitted
 	*i -> T

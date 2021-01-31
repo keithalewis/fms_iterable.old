@@ -500,13 +500,13 @@ namespace fms {
 	template<iterable I, class D = void*>
 	class scan {
 		I i, e;
-		D data;
+		D next; //?? std::function<void(const I&)>
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
 		using value_type = sentinal<I>;
 		scan(const I& i)
-			: i(i), e(i), data(nullptr)
+			: i(i), e(i) //, data(nullptr)
 		{
 			++e;
 		}
@@ -565,6 +565,73 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion scan
+
+#pragma region when
+
+	// filter iterable by predicate
+	template<iterable I, class P>
+	class when : public I {
+		std::function<bool(const I&)> p;
+		// increment to next iterator satisfying p
+		void next()
+		{
+			while (I::operator bool() and !p(*this)) {
+				I::operator++();
+			}
+		}
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = typename I::value_type;
+
+		when(const P& p, const I& i)
+			: I(i), p(p)
+		{
+			next();
+		}
+		using I::operator bool;
+		auto end() const
+		{
+			return when(p, I::end());
+		}
+		using I::operator==;
+		using I::operator!=;
+		using I::operator*;
+		when& operator++()
+		{
+			I::operator++();
+			next();
+
+			return *this;
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_when()
+	{
+		{
+			auto even = [](const auto& pi) { return *pi % 2 == 0;  };
+			when e(even, iota(0));
+			assert(e);
+			auto e2(e);
+			assert(e2);
+			assert(e2 == e);
+			e = e2;
+			assert(e);
+			assert(!(e != e2));
+			assert(*e == 0);
+			++e;
+			assert(*e == 2);
+			assert(*++e == 4);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion when
 
 #pragma region until
 
