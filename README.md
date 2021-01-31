@@ -22,9 +22,9 @@ when a value less than machine epsilon is encountered. The function `sum` adds
 all iterable values.
 
 A `C` array can be made into an iterable by supplying its size. The library provides for constant
-iterables and infinite arithmetic sequences called `iota(t = 0)` to generate 
-the arithmetic sequence `t, t + 1, t + 2, ...`.
-Overloads for arithmetic operators provide so, for example, 
+iterables and an infinite arithmetic sequences called `iota(t = 0)` to generate 
+`t, t + 1, t + 2, ...`.
+Overloads for arithmetic operators are provided so, for example, 
 `a + b * iota(0)` results in `a + b*n`, `n = 0, 1, 2, ...` during taversal.
 This permits certain peephole optimizations such as `operator+(0, i)`
 returning `i`, or `operator*(i, 0)` returning the constant `0` iterator.
@@ -47,6 +47,6 @@ auto generate(iterable it)
 	}
 }
 ```
-is an asynchronous coroutine generator.
+is an asynchronous generator coroutine.
 
 As you will see when you peruse the code, most functions involving iterables have a natural and pleasing implementation.
