@@ -1,41 +1,52 @@
 # iterable
 
+> _All iterables begin alike, but each iterable ends after its own fashion_
+
 This header only library uses C++20 to make iterators easier to use by
 adding the member function `explicit operator bool() const` instead of using the STL `end()`
-notion to delimit ranges. Perhaps a catchier name is `iterabool`.
+notion to delimit ranges.
 
 Iterables allow for infinite (lazy) ranges. This is not a new idea.
 Many other languages use something similar, in particular C# where it is used
-to make [`LINQ`](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/)
-the coolest thing since button shoes.
+in [`LINQ`](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/).
+Perhaps the idea originated in lisp where it takes the form of `cdr` being empty.
 
-Using iterables rather than arrays makes C++ more expressive. For example, `sum(epsilon(power(x)/factorial(0)))`
-computes `exp(x)` to machine precision using exp(_x_) = &Sigma;<sub>_n_ ≥ 0</sub> _x_<sup>_n_</sup>/_n_!.
+Using iterables rather than arrays makes C++ more expressive. For example, 
+`sum(epsilon(power(x)/factorial(0.)))` computes `exp(x)` to machine precision 
+using exp(_x_) = &Sigma;<sub>_n_ ≥ 0</sub> _x_<sup>_n_</sup>/_n_!. The iterable
+`power(x)` is the infinite sequence `x^n` for `n = 0, 1, 2, ...` and `factorial(0.)`
+is the infinite sequence `n!`. Global arithmetic operators
+are provided for elementwise operations. The quotient results in the infinite
+sequence `x^n/n!`. The iterable transformation `epsilon` teminates an iterable
+when a value less than machine epsilon is encountered. The function `sum` adds
+all iterable values.
 
 A `C` array can be made into an iterable by supplying its size. The library provides for constant
-iterables and infinite arithmetic sequences called `iota(t = 0, dt = 1)` to generate `{t, t + dt, ...}`.
+iterables and infinite arithmetic sequences called `iota(t = 0)` to generate 
+the arithmetic sequence `t, t + 1, t + 2, ...`.
+Overloads for arithmetic operators provide so, for example, 
+`a + b * iota(0)` results in `a + b*n`, `n = 0, 1, 2, ...` during taversal.
+This permits certain peephole optimizations such as `operator+(0, i)`
+returning `i`, or `operator*(i, 0)` returning the constant `0` iterator.
 
-Overloads for arithmetic operators provide syntactic sugar. 
-For example, `c(a) + c(b) * iota{}` is another way to say `iota(a, b)`. Likewise, `itoa{} * b + a`.
+Writing an iterator class is simple: provide `explicit operator bool() const`,
+`operator*() const` to return the current value, and `operator++()` to
+increment to the next value in an appropriate way and return `*this`.
+To allow using an iterable with the STL an `end() const` function should
+also be provided.
 
-Standard stream oriented functors `apply`,  `filter`, and (right) `fold` create new iterables.
-For example `i | i % 2 == 0` is a filter that extracts the even values of `i`. It is equivalent
-to `filter(eq(mod(i,2), c(0)), i)`.
+The global `begin(iterable i)` simply returns `i` and the global `end(iterable i)`
+returns `i.end()`.
+This makes iterables useable with range based for loops. For example,
 
-Iterables also have `begin()` and `end()` member functions and can be
-used with STL routines or in range based for loops. 
-
-Asynchronous programming becomes trivial using coroutines.
-If `i` is iterable then
 ```
-auto coro(I i) 
+auto generate(iterable it) 
 {
-	while (i) {
-		co_yield *i;
-		++i;
+	for (const auto& i : it) {
+		co_yield i;
 	}
 }
 ```
-is a generator for the iterable.
+is an asynchronous coroutine generator.
 
 As you will see when you peruse the code, most functions involving iterables have a natural and pleasing implementation.

@@ -88,11 +88,26 @@ namespace fms {
 	{
 		return i;
 	}
-	// "...but each iterable ends after its own sentinal."
+	// "...but each iterable ends in its own fashion."
 	template<iterable I>
 	inline auto end(const I& i)
 	{
 		return i.end();
+	}
+
+	// all values are equal
+	template<iterable I, iterable J>
+	inline bool equal(I i, J j)
+	{
+		while (i and j) {
+			if (*i != *j) {
+				return false;
+			}
+			++i;
+			++j;
+		}
+
+		return !i and !j;
 	}
 
 	/*
@@ -364,6 +379,7 @@ namespace fms {
 #pragma region take
 
 	// take first (>0) or last (<0) n items
+	// same as done(countdown(n), i)
 	template<iterable I>
 	class take : public I {
 		size_t n;
@@ -548,15 +564,7 @@ namespace fms {
 			assert(s);
 			assert(!(s2 != s));
 			for (int n = 1; n < 3; ++n, ++s) {
-				auto in = take(n, iota(0));
-				auto sn = *s;
-				while (in) {
-					assert(*in == *sn);
-					++in;
-					++sn;
-				}
-				assert(!in);
-				assert(!sn);
+				assert(equal(*s, take(n, iota(0))));
 			}
 			assert(!s);
 		}
