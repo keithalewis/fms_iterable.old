@@ -2,27 +2,23 @@
 
 Can we may std::function part of the class signature instead of a member?
 
+Basic operations:
+	when(p, i) - filter based on p(i)
+	done(p, i) - stop when p(i)
+	scan(i) - {{i}, {i, ++i}, ...}
+	apply(f, i) - {f(i), f(++i), ...}
+	join(i, j, ...) {i, i++, ..., j, j++, ...}
+	tuple(i, j, ...) {<i,j,...>, <++i,++j, ...>, ...} 
+		???zip
+		???stop all end? use done to stop early
+	cycle(i) {i, ++i, ..., i, ++i, ...}
+
 iterable:
 	!!i -> bool, * and ++ permitted
 	*i -> T
 	++i -> I&
 
-Basic operations: 
-	generate(f): 
-		true
-		*i -> f()
-		++i -> noop
-
-	truncate(p,i):
-		p(i)
-		*i -> *i
-		++i -> ++i
-
-	filter(p, i):
-		true
-		*i -> *i
-		++ -> while !p(i) ++i
-
+B
 	apply: 
 		!!
 		*i -> f(i)
@@ -38,75 +34,3 @@ Basic operations:
 		*(i,j) -> i ? *i : *j
 		++(i,j) -> i ? (++i,j) : (i, ++j) 
 
-auto count = [](){static i = 0; return i++;};
-auto constant = [k]() { static k0 = k; return k0; }:
-auto incr = [](auto& i) { return ++i; };
-auto boolean [p](const auto& i) { static P p; return p(i); };
-auto value [v](const auto& i) { return v(i); };
-
-template<iterable I, typename... Args>
-inline auto filter(Args&&... args)
-{
-	return [...args = std::forward<Args>(args)](const I& i)
-	{
-		...args, ..., i
-	};
-}
-
-template<class OpBool, OpEq, OpStar, OpIncr>
-class iterable {
-	explicit operator bool() const
-	{
-		return op_bool(i);
-	}
-	struct last {
-		bool operator==(const iterable& i) const
-		{
-			return !i;
-		}
-	}
-	auto end()
-	{
-
-	}
-	value_type operator*() const
-	{
-		return op_star(i);
-	}
-	iterable& operator++()
-	{
-		op_incr(i);
-
-		return *this;
-	}
-}
-
-inline take(size_t n, const I& i)
-{
-	return iterable<Count<n>,OpEq,...>(i);
-}
-
-template<iterable I>
-class counted : public I {
-	size_t n;
-	counted(const I& i)
-		: I(i), n(0)
-	{ }
-	counted& operator++()
-	{
-		++n;
-		I::operator++();
-
-		return *this;
-	}
-}
-
-// truncate an iterator
-template<class P, iterable I>
-class until : public I {
-	P p;
-	explicit operator bool() const
-	{
-		return !p(*this);
-	}
-};

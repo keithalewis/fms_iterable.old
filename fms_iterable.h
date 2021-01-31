@@ -454,20 +454,21 @@ namespace fms {
 
 #pragma endregion take
 
-#pragma region sentinal
+#pragma region done
 
+	//??? done using bool(const I&)
 	template<iterable I>
-	class sentinal : public I {
+	class done : public I {
 		I e;
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
 		using value_type = typename I::value_type;
 
-		sentinal(const I& i, const I& e)
+		done(const I& i, const I& e)
 			: I(i), e(e)
 		{ }
-		auto operator<=>(const sentinal&) const = default;
+		auto operator<=>(const done&) const = default;
 
 		explicit operator bool() const
 		{
@@ -475,14 +476,14 @@ namespace fms {
 		}
 		auto end() const
 		{
-			return sentinal(e, e);
+			return done(e, e);
 		}
 
 		value_type operator*() const
 		{
 			return I::operator*();
 		}
-		sentinal& operator++()
+		done& operator++()
 		{
 			if (this) {
 				I::operator++();
@@ -492,10 +493,11 @@ namespace fms {
 		}
 	};
 
-#pragma endregion sentinal
+#pragma endregion done
 
 #pragma region scan
 
+	//??? use done
 	// return {{i}, {i,++i}, ... {i, ++i, , ..., i.end()}}
 	template<iterable I, class N = void*>
 	class scan {
@@ -504,7 +506,7 @@ namespace fms {
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = sentinal<I>;
+		using value_type = done<I>;
 		scan(const I& i)
 			: i(i), e(i) //, data(nullptr)
 		{
@@ -522,7 +524,7 @@ namespace fms {
 		}
 		value_type operator*() const
 		{
-			return sentinal<I>(i, e);
+			return done<I>(i, e);
 		}
 		scan& operator++()
 		{
@@ -632,6 +634,40 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion when
+
+#pragma region cycle
+
+	template<iterable I>
+	class cycle : I {
+		I i;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = typename I::value_type;
+		cycle(const I& i)
+			: I(i), i(i)
+		{ }
+		explicit operator bool() const
+		{
+			return true;
+		}
+		auto end() const
+		{
+			return cycle(i.end()); // I::operator==(end()) always false
+		}
+		using I::operator*;
+		cycle& operator++()
+		{
+			I::operator++();
+			if (!I::operator bool()) {
+				I::operator=(i);
+			}
+
+			return *this;
+		}
+	};
+
+#pragma endregion cycle
 
 #pragma region until
 
@@ -802,10 +838,10 @@ namespace fms {
 #pragma endregion until
 
 /*
-#pragma region sentinal
+#pragma region done
 
 	template<iterable I>
-	inline auto sentinal(const I& i, const I& e)
+	inline auto done(const I& i, const I& e)
 	{
 		return until([e](const I& i) { return i == e; }, i);
 	}
@@ -823,7 +859,7 @@ namespace fms {
 
 #endif // _DEBUG
 
-#pragma endregion sentinal
+#pragma endregion done
 */
 
 #pragma region array
