@@ -15,29 +15,29 @@
 // to make tests return false instead of abort
 // #define assert(e) if (!(e)) return false
 
-#define FMS_ARITHMETIC_OPS(X)  \
-	X(+, add, std::plus) \
-	X(-, sub, std::minus) \
-	X(*, mul, std::multiplies) \
-	X(/, div, std::divides) \
-	X(%, mod, std::modulus) \
+#define FMS_ARITHMETIC_OPS(X)     \
+	X(+, add, std::plus)          \
+	X(-, sub, std::minus)         \
+	X(*, mul, std::multiplies)    \
+	X(/, div, std::divides)       \
+	X(%, mod, std::modulus)       \
 
 #define FMS_COMPARISON_OPS(X)     \
-	X(==, eq, std::equal_to) \
-	X(!=, ne, std::not_equal_to) \
-	X(> , gt, std::greater)  \
-	X(< , lt, std::less)  \
+	X(==, eq, std::equal_to)      \
+	X(!=, ne, std::not_equal_to)  \
+	X(> , gt, std::greater)       \
+	X(< , lt, std::less)          \
 	X(>=, ge, std::greater_equal) \
-	X(<=, le, std::less_equal) \
+	X(<=, le, std::less_equal)    \
 
-#define FMS_LOGICAL_OPS(X) \
-	X(&&, and, std::logical_and) \
-	X(||, or ,std::logical_or) \
+#define FMS_LOGICAL_OPS(X)        \
+	X(&&, and, std::logical_and)  \
+	X(||, or ,std::logical_or)    \
 
-#define FMS_BITWISE_OPS(X) \
-	X(&, AND, std::bit_and) \
-	X(|, OR , std::bit_or) \
-	X(^, XOR, std::bit_xor) \
+#define FMS_BITWISE_OPS(X)        \
+	X(&, AND, std::bit_and)       \
+	X(|, OR , std::bit_or)        \
+	X(^, XOR, std::bit_xor)       \
 
 namespace {
 	// relations
@@ -199,7 +199,7 @@ namespace fms {
 		{
 			return p == _p.p;
 		}
-		auto end()
+		auto end() const
 		{
 			return pointer(nullptr);
 		}
@@ -267,7 +267,34 @@ inline auto operator-(fms::pointer<I> p, typename fms::pointer<I>::difference_ty
 
 namespace fms {
 
+	#ifdef _DEBUG
+
+	inline bool test_pointer()
+	{
+		{
+			int i[] = { 1,2,3 };
+			pointer<int> p(i);
+			assert(p);
+			auto p2(p);
+			assert(p2);
+			assert(p2 == p);
+			p = p2;
+			assert(p);
+			assert(!(p != p2));
+
+			assert(*p == i[0]);
+			++p;
+			assert(p);
+			assert(*p == i[1]);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
 #pragma endregion pointer
+
 
 #pragma region null
 	
@@ -366,7 +393,7 @@ namespace fms {
 		{
 			return n == i.n and I::operator==(i);
 		}
-		auto end()
+		auto end() const
 		{
 			return take(0, skip(n, *this));
 		}
@@ -415,6 +442,10 @@ namespace fms {
 			assert(!t);
 			assert(size(t) == 0);
 		}
+		{
+			iota<int> i;
+			//auto t = take_(3)(i); // not working
+		}
 
 		return true;
 	}
@@ -422,6 +453,118 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion take
+
+#pragma region sentinal
+
+	template<iterable I>
+	class sentinal : public I {
+		I e;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = typename I::value_type;
+
+		sentinal(const I& i, const I& e)
+			: I(i), e(e)
+		{ }
+		auto operator<=>(const sentinal&) const = default;
+
+		explicit operator bool() const
+		{
+			return !I::operator==(e);
+		}
+		auto end() const
+		{
+			return sentinal(e, e);
+		}
+
+		value_type operator*() const
+		{
+			return I::operator*();
+		}
+		sentinal& operator++()
+		{
+			if (this) {
+				I::operator++();
+			}
+
+			return *this;
+		}
+	};
+
+#pragma endregion sentinal
+
+#pragma region scan
+
+	// return {{i}, {i,++i}, ... {i, ++i, , ..., i.end()}
+	template<iterable I, class D = void*>
+	class scan {
+		I i, e;
+		D data;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = sentinal<I>;
+		scan(const I& i)
+			: i(i), e(i), data(nullptr)
+		{
+			++e;
+		}
+		auto operator<=>(const scan&) const = default;
+
+		explicit operator bool() const
+		{
+			return e != i.end();
+		}
+		auto end() const
+		{
+			return scan(e, e);
+		}
+		value_type operator*() const
+		{
+			return sentinal<I>(i, e);
+		}
+		scan& operator++()
+		{
+			++e;
+
+			return *this;
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_scan()
+	{
+		{
+			scan s(take(3, iota(0)));
+			assert(s);
+			auto s2(s);
+			assert(s2);
+			assert(s == s2);
+			s = s2;
+			assert(s);
+			assert(!(s2 != s));
+			for (int n = 1; n < 3; ++n, ++s) {
+				auto in = take(n, iota(0));
+				auto sn = *s;
+				while (in) {
+					assert(*in == *sn);
+					++in;
+					++sn;
+				}
+				assert(!in);
+				assert(!sn);
+			}
+			assert(!s);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion scan
 
 #pragma region until
 
@@ -649,7 +792,7 @@ namespace fms {
 		{
 			return n == _a.n and a == _a.a;
 		}
-		auto end()
+		auto end() const
 		{
 			return array(0, a + n);
 		}

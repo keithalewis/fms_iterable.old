@@ -5,11 +5,13 @@
 
 using namespace fms;
 
+bool test_pointer_ = test_pointer();
 //bool test_iota_ = test_iota();
 bool test_null_ = test_null();
 bool test_constant_i = test_constant<int>();
 bool test_until_ = test_until();
 bool test_take_i = test_take<int>();
+bool test_scan_ = test_scan();
 bool test_epsilon_d = test_epsilon<double>();
 bool test_epsilon_f = test_epsilon<float>();
 bool test_factorial_i = test_factorial<int>();
