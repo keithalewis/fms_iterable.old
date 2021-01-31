@@ -13,6 +13,7 @@ namespace fms {
 		// random access
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
 		using value_type = T;
 
 		constant()
@@ -105,6 +106,7 @@ namespace fms {
 		//??? random access
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
 		using value_type = T;
 
 		iota(T t = 0)
@@ -115,23 +117,17 @@ namespace fms {
 		~iota()
 		{ }
 
-		bool operator==(const iota& i) const
+		auto operator<=>(const iota& i) const = default;
+
+		explicit operator bool() const
 		{
-			return t == i.t;
-		}
-		bool operator!=(const iota& i) const
-		{
-			return !operator==(i);
+			return true;
 		}
 		auto end() const
 		{
 			return iota(std::numeric_limits<T>::max());
 		}
 
-		explicit operator bool() const
-		{
-			return true;
-		}
 		value_type operator*() const
 		{
 			return t;
@@ -156,6 +152,7 @@ namespace fms {
 		//??? random access
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
 		using value_type = T;
 
 		power(T t = 1, T tn = 1)
@@ -206,6 +203,7 @@ namespace fms {
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
 		using value_type = T;
 
 		factorial(T n = 0, T n_ = 1)
@@ -272,6 +270,7 @@ namespace fms {
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
 		using value_type = T;
 
 		pochhammer(T x, T k = 1)

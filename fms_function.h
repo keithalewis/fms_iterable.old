@@ -10,7 +10,7 @@ namespace fms {
 	template<iterable I>
 	inline constexpr bool all(I i)
 	{
-		return !!i ? (*i and all(++i)) : true;
+		return !i ? true : *i and all(++i);
 	}
 
 #ifdef _DEBUG
@@ -39,7 +39,7 @@ namespace fms {
 	template<iterable I>
 	inline constexpr bool any(I i)
 	{
-		return !!i ? (*i or any(++i)) : false;
+		return !i ? false : *i or any(++i);
 	}
 
 #ifdef _DEBUG
@@ -60,15 +60,10 @@ namespace fms {
 
 #endif // _DEBUG
 
-	// STL end
-	//!!! specialize for random access iterable
-	template<iterable I>
-	inline I end_(I i)
-	{
-		for (; i; ++i) ; // nothing
+#pragma endregion any
 
-		return i;
-	}
+#pragma region last
+
 	// last before end
 	template<iterable I>
 	inline I last(I i)
@@ -92,34 +87,67 @@ namespace fms {
 
 #endif // _DEBUG
 
+#pragma region last
 
+#pragma region skip
 
+	namespace {
+		template<iterable I>
+		inline I skip_tag(typename I::difference_type n, I i, std::forward_iterator_tag)
+		{
+			// ensure(n >= 0);
+			while (n and i) {
+				--n;
+				++i;
+			}
 
-#pragma endregion any
-	template<iterable I>
-	inline I skip(size_t n, I i)
-	{
-		while (n and i) { // !!!specialize for random access
-			--n;
-			++i;
+			return i;
 		}
-
-		return i;
+		template<iterable I>
+		inline I skip_tag(typename I::difference_type n, I i, std::random_access_iterator_tag)
+		{
+			return i += n;
+		}
+	}
+	template<iterable I>
+	inline I skip(typename I::difference_type n, I i)
+	{
+		return skip_tag(n, i, typename I::iterator_category{});
 	}
 
+#pragma endregion skip
+
+#pragma region size_length
+
 	// number of items in sequence
-	// length(s, length(t)) = length(s) + length(t)
+	// size(s, size(t)) = size(s) + size(t)
 	template<iterable I>
-	inline size_t length(I i, size_t n = 0)
+	inline size_t size(I i, size_t n = 0)
 	{
 		for (; i; ++i) { ++n; }
 
 		return n;
 	}
-	// length alias
+	// template<sized_iterable I> inline size_t size(const I& i) { return i.size(); }
+
+	// size alias
 	template<iterable I>
-	inline size_t size(I i, size_t n = 0)
+	inline size_t length(I i, size_t n = 0)
 	{
-		return length(i, n);
+		return size(i, n);
 	}
+
+#ifdef _DEBUG
+
+	template<iterable I, iterable J>
+	inline bool test_size(const I& i, const J& j)
+	{
+		assert(size(i, size(j)) == size(i) + size(j));
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion size_length
 }

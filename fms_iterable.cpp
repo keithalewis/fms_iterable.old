@@ -6,6 +6,7 @@
 using namespace fms;
 
 bool test_pointer_ = test_pointer();
+bool test_array_i = test_array<int>();
 //bool test_iota_ = test_iota();
 bool test_null_ = test_null();
 bool test_constant_i = test_constant<int>();
@@ -13,11 +14,12 @@ bool test_until_ = test_until();
 bool test_take_i = test_take<int>();
 bool test_scan_ = test_scan();
 bool test_when_ = test_when();
+bool test_mask_ = test_mask();
 bool test_epsilon_d = test_epsilon<double>();
 bool test_epsilon_f = test_epsilon<float>();
 bool test_factorial_i = test_factorial<int>();
 bool test_factorial_d = test_factorial<double>();
-bool test_concatenate_ = test_concatenate();
+bool test_join_ = test_join();
 
 //bool test_iterable_ = test_iterable();
 /*
@@ -63,6 +65,22 @@ int main()
 	{
 		double x = 1;
 		assert(std::fabs(exp(x) - add(epsilon(power(x) / factorial(0.)))) <= eps);
+	}
+	{
+		auto e = (iota(0) | [](const auto& i) { return *i % 2 == 0; });
+		assert(e);
+		assert(*e == 0);
+		++e;
+		assert(e);
+		assert(*e == 2);
+	}
+	{
+		auto i = iota(0);
+		auto o = i | i % 2;
+		assert(o);
+		assert(*o == 1);
+		++o;
+		assert(*o == 3);
 	}
 
 	return 0;
