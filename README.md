@@ -16,8 +16,8 @@ Using iterables rather than arrays makes C++ more expressive. For example,
 using exp(_x_) = &Sigma;<sub>_n_ ≥ 0</sub> _x_<sup>_n_</sup>/_n_!. The iterable
 `power(x)` is the infinite sequence `x^n` for `n = 0, 1, 2, ...` and `factorial(0.)`
 is the infinite sequence `n!`. Global arithmetic operators
-are provided for elementwise operations. The quotient results in the infinite
-sequence `x^n/n!`. The iterable transformation `epsilon` teminates an iterable
+are provided for element-wise operations. The quotient results in the infinite
+sequence `x^n/n!`. The iterable transformation `epsilon` terminates an iterable
 when a value less than machine epsilon is encountered. The function `sum` adds
 all iterable values.
 
@@ -25,7 +25,7 @@ A `C` array can be made into an iterable by supplying its size. The library prov
 iterables and an infinite arithmetic sequences called `iota(t = 0)` to generate 
 `t, t + 1, t + 2, ...`.
 Overloads for arithmetic operators are provided so, for example, 
-`a + b * iota(0)` results in `a + b*n`, `n = 0, 1, 2, ...` during taversal.
+`a + b * iota(0)` results in `a + b*n`, `n = 0, 1, 2, ...` during traversal.
 This permits certain peephole optimizations such as `operator+(0, i)`
 returning `i`, or `operator*(i, 0)` returning the constant `0` iterator.
 
@@ -37,7 +37,7 @@ also be provided.
 
 The global `begin(iterable i)` simply returns `i` and the global `end(iterable i)`
 returns `i.end()`.
-This makes iterables useable with range based for loops. For example,
+This makes iterables usable with range based for loops. For example,
 
 ```
 auto generate(iterable it) 
