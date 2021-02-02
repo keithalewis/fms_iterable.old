@@ -21,20 +21,17 @@ bool test_factorial_i = test_factorial<int>();
 bool test_factorial_d = test_factorial<double>();
 bool test_join_ = test_join();
 
-//bool test_iterable_ = test_iterable();
+bool test_copy = []() {
+	{
+		int i[] = { 1,2,3 }, j[3];
+		assert(copy(array(i), array(j)));
+		assert(equal(array(i), array(j)));
+	}
+
+	return true;
+}();
+
 /*
-
-
-bool test_forward_iterable_ = test_forward_iterable();
-bool test_array_i = test_array<int>();
-bool test_apply_ = test_apply();
-bool test_binop_i = test_binop<int>();
-bool test_fold_ = test_fold();
-bool test_take_ = test_take<int>();
-
-bool test_last_0 = test_last(take(0, iota(1)));
-bool test_last_3 = test_last(take(3, iota(1)));
-
 template<class... Is>
 inline auto tuple_incr(Is&&... is)
 {
@@ -51,6 +48,21 @@ inline auto tuple_star(Is&&... is)
 }
 */
 
+// quicksort i on pivot p
+template<iterable I, class T = typename I::value_type>
+auto qsort(T p, I i)
+{
+	return (i & i < p);// , unit(p), (i & i > p);
+}
+
+bool test_qsort = []() {
+	{
+		int i[] = { 3,2,1,4 };
+		auto s = qsort(take(1, array(i)), array(i));
+	}
+
+	return true;
+}();
 
 int main()
 {
@@ -67,20 +79,31 @@ int main()
 		assert(std::fabs(exp(x) - add(epsilon(power(x) / factorial(0.)))) <= eps);
 	}
 	{
-		auto e = (iota(0) | [](const auto& i) { return *i % 2 == 0; });
+		// filter
+		auto e = (iota(0) | [](const auto& i) { return *i % 2; });
 		assert(e);
-		assert(*e == 0);
+		assert(*e == 1);
 		++e;
 		assert(e);
-		assert(*e == 2);
+		assert(*e == 3);
 	}
 	{
 		auto i = iota(0);
-		auto o = i | i % 2;
+		// mask
+		auto o = i & (i % 2);
 		assert(o);
 		assert(*o == 1);
 		++o;
 		assert(*o == 3);
+	}
+	{
+		auto i = iota(0);
+		// mask
+		auto o = i & ~(i % 2);
+		assert(o);
+		assert(*o == 0);
+		++o;
+		assert(*o == 2);
 	}
 
 	return 0;

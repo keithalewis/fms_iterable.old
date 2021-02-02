@@ -350,12 +350,156 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion pointer
+
+#pragma region constant
+
+	template<typename T>
+	class constant {
+		T t;
+	public:
+		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
+		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
+		using difference_type = typename std::iterator_traits<T*>::difference_type;
+		using reference = typename T&;
+		using value_type = T;
+
+		constant()
+			: t(0)
+		{ }
+		constant(const T& t)
+			: t(t)
+		{ }
+		constant(const constant&) = default;
+		constant& operator=(const constant&) = default;
+		~constant()
+		{ }
+
+		auto operator<=>(const constant&) const = default;
+
+		explicit operator bool() const
+		{
+			return true;
+		}
+		auto end() const
+		{
+			return std::numeric_limits<T>::max(); //??? what else
+		}
+
+		value_type operator*() const
+		{
+			return t;
+		}
+		reference operator*()
+		{
+			return t;
+		}
+
+		value_type operator[](difference_type n) const
+		{
+			return t;
+		}
+		reference operator[](difference_type n)
+		{
+			return t;
+		}
+
+		constant& operator++()
+		{
+			return *this;
+		}
+		constant operator++(int)
+		{
+			return *this;
+		}
+		constant& operator--()
+		{
+			return *this;
+		}
+		constant operator--(int)
+		{
+			return *this;
+		}
+
+		constant& operator+=(difference_type n)
+		{
+			return *this;
+		}
+		constant& operator-=(difference_type n)
+		{
+			return *this;
+		}
+	};
+
+} // namespace fms
+
+template<typename T>
+inline auto operator+(fms::constant<T> c, typename fms::constant<T>::difference_type n)
+{
+	return c;
+}
+template<typename T>
+inline auto operator+(typename fms::constant<T>::difference_type n, fms::constant<T> c)
+{
+	return c;
+}
+template<typename T>
+inline auto operator-(fms::constant<T> c, typename fms::constant<T>::difference_type n)
+{
+	return c;
+}
+
+namespace fms {
+#ifdef _DEBUG
+#include <cassert>
+
+	template<typename T>
+	inline bool test_constant()
+	{
+		{
+			constant<T> c;
+			auto c2 = c;
+			c = c2;
+			assert(c == c2);
+			assert(c2 == c);
+			assert(c);
+			++c;
+			assert(c);
+		}
+		{
+			constant<T> c(1);
+			auto c2 = c;
+			c = c2;
+			assert(c == c2);
+			assert(c2 == c);
+			assert(c);
+			assert(*c == 1);
+			assert(1 == *c);
+			++c;
+			assert(c);
+			assert(*c == 1);
+			assert(1 == *c);
+			assert(begin(c) != end(c));
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion constant
+
 #pragma region array
 
 	template<class T>
 	class array : public pointer<T> {
 		size_t n;
 	public:
+		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
+		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
+		using difference_type = typename std::iterator_traits<T*>::difference_type;
+		using reference = typename T&;
+		using value_type = T;
+
 		array()
 			: pointer<T>(nullptr), n(0)
 		{ }
@@ -481,6 +625,7 @@ namespace fms {
 		return true;
 	}
 
+
 #endif // _DEBUG
 
 #pragma endregion array
@@ -556,9 +701,9 @@ namespace fms {
 	class take : public I {
 		size_t n;
 	public:
-		using iterator_concept = std::forward_iterator_tag;
+		using iterator_concept = std::forward_iterator_tag; //!!! I::iterator_concept
 		using iterator_category = std::forward_iterator_tag;
-		//using value_type = typename I::value_type;
+		using value_type = typename I::value_type;
 
 		take()
 			: I{}, n(0)
@@ -597,6 +742,12 @@ namespace fms {
 		}
 		//??? constexp operators/enable_if/requires
 	};
+	// iterator with one item
+	template<class T>
+	inline auto unit(T t)
+	{
+		return take(1, constant(t));
+	}
 	/*
 	// e.g., take_(3)(iota<int>(0))
 	template<iterable I>
@@ -605,6 +756,7 @@ namespace fms {
 		return [n](const I& i) { return take<I>(n, i); };
 	}
 	*/
+
 
 #ifdef _DEBUG
 
@@ -636,6 +788,13 @@ namespace fms {
 			}
 			assert(n == 3);
 			assert(3 == size(t3));
+		}
+		{
+			auto u = unit(1);
+			assert(u);
+			assert(*u == 1);
+			++u;
+			assert(!u);
 		}
 
 		return true;
@@ -837,6 +996,10 @@ namespace fms {
 			//??? check *this and m both true or both false
 		}
 	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = typename I::value_type;
+
 		mask(const I& i, const M& m)
 			: I(i), m(m)
 		{
@@ -1290,6 +1453,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 	template<class T>
 	inline bool test_binop()
 	{
+		using c = constant<T>;
 		{
 			T i[] = { 1,2,3 };
 			auto a = array(i);
@@ -1510,6 +1674,8 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 
 FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 #undef ITERABLE_ARITHMETIC
+
+// peephole optimizations
 template<fms::iterable I, typename T = typename I::value_type>
 inline auto operator+(const I& i, const T& t)
 {
@@ -1528,6 +1694,7 @@ inline auto operator+(const T& t, const I& i)
 
 	return fms::constant(t) + i;
 }
+
 template<fms::iterable I, typename T = typename I::value_type>
 inline auto operator-(const I& i, const T& t)
 {
@@ -1542,6 +1709,7 @@ inline auto operator-(const T& t, const I& i)
 {
 	return fms::constant(t) - i;
 }
+
 template<fms::iterable I, typename T = typename I::value_type>
 inline auto operator*(const I& i, const T& t)
 {
@@ -1560,6 +1728,7 @@ inline auto operator*(const T& t, const I& i)
 
 	return fms::constant(t) * i;
 }
+
 template<fms::iterable I, typename T = typename I::value_type>
 inline auto operator/(const I& i, const T& t)
 {
@@ -1574,26 +1743,53 @@ inline auto operator/(const T& t, const I& i)
 {
 	return fms::constant(t) / i;
 }
+
 template<fms::iterable I, typename T = typename I::value_type>
 inline auto operator%(const I& i, const T& t)
 {
 	return i % fms::constant(t);
 }
-
-template<fms::iterable I, fms::iterable J>
-inline auto operator,(const I& i, const J& j)
+template<fms::iterable I, typename T = typename I::value_type>
+inline auto operator%(const T& t, const I& i)
 {
-	return fms::join(i, j);
+	return fms::constant(t) % i;
 }
 
-// comprehension
+#define ITERABLE_COMPARISON(a,b,c)                              \
+	template<fms::iterable I, fms::iterable J>                  \
+	inline auto operator a(const I& i, const J& j)              \
+	{ return fms::binop(c{}, i, j); }                           \
+                                                                \
+	template<fms::iterable I, class T = typename I::value_type> \
+	inline auto operator a(const I& i, const T& t)              \
+	{ return fms::binop(c{}, i, fms::constant(t)); }            \
+                                                                \
+	template<fms::iterable I, class T = typename I::value_type> \
+	inline auto operator a(const T& t, const I& i)              \
+	{ return fms::binop(c{}, fms::constant(t), i); }
+
+FMS_COMPARISON_OPS(ITERABLE_COMPARISON)
+
+template<fms::iterable I>
+inline auto operator~(const I& i)
+{
+	return i == 0;
+}
+
+// filter comprehension
 template<class P, fms::iterable I>
 inline auto operator|(const I& i, const P& p)
 {
 	return fms::when(p, i);
 }
 template<fms::iterable I, fms::iterable M>
-inline auto operator|(const I& i, const M& m)
+inline auto operator&(const I& i, const M& m)
 {
 	return fms::mask(i, m);
+}
+
+template<fms::iterable I, fms::iterable J>
+inline auto operator,(const I& i, const J& j)
+{
+	return fms::join(i, j);
 }

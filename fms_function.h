@@ -150,4 +150,29 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion size_length
+
+#pragma region copy
+
+	// copy i to j and indicate complete copy
+	template<iterable I, iterable J>
+	inline bool copy(I i, J j)
+	{
+		for (; i and j; ++i, ++j) {
+			*j = *i;
+		}
+
+		return !i and !j;
+	}
+
+#ifdef _DEBUG
+
+	bool test_copy()
+	{
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma region copy
+
 }
