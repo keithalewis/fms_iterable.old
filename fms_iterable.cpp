@@ -1,5 +1,6 @@
 // fms_iterable.cpp
 #include <cassert>
+#include <iostream>
 #include "fms_iterable.h"
 
 
@@ -52,7 +53,7 @@ inline auto tuple_star(Is&&... is)
 template<iterable I, class T = typename I::value_type>
 auto qsort(T p, I i)
 {
-	return (i & i < p);// , unit(p), (i & i > p);
+	return (i & i < p), unit(p); // , (i & i > p);
 }
 
 bool test_qsort = []() {
@@ -104,6 +105,10 @@ int main()
 		assert(*o == 0);
 		++o;
 		assert(*o == 2);
+	}
+	{
+		//??? ostream_joiner
+		copy(take(3, iota(0)), std::ostream_iterator<int>(std::cout, ", "));
 	}
 
 	return 0;

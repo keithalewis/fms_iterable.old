@@ -1499,7 +1499,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = std::common_type_t<typename I::value_type, typename J::value_type>;
+		using value_type = int;// std::common_type_t<typename I::value_type, typename J::value_type>;
 
 		join()
 		{ }
@@ -1511,13 +1511,15 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 		~join()
 		{ }
 
-		bool operator==(const join& s) const
-		{
-			i == s.i and j == s.j;
-		}
+		auto operator<=>(const join&) const = default;
+
 		explicit operator bool() const
 		{
 			return i or j;
+		}
+		auto end() const
+		{
+			return join(i.end(), j.end());
 		}
 		value_type operator*() const
 		{
@@ -1547,10 +1549,27 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 		{
 			auto i = take(2, iota<int>(0));
 			auto j = take(2, iota<int>(2));
-			assert(all(eq(
+			assert(equal(
 				join(i, j),
 				take(4, iota<int>(0))
-			)));
+			));
+		}
+		{
+			join j(unit(1), unit(2));
+			assert(j);
+			auto j2(j);
+			assert(j2);
+			assert(j2 == j);
+			j = j2;
+			assert(!(j != j2));
+			assert(equal(j, j2));
+
+			assert(2 == length(j));
+			assert(*j == 1);
+			++j;
+			assert(*j == 2);
+			++j;
+			assert(!j);
 		}
 
 		return true;

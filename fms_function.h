@@ -153,8 +153,20 @@ namespace fms {
 
 #pragma region copy
 
+	// copy i to STL output iterator
+	template<iterable I, typename J>
+	//requires std::output_iterator<J, typename J::value_type>
+	inline bool copy(I i, J j)
+	{
+		for (; i; ++i, ++j) {
+			*j = *i;
+		}
+
+		return true;
+	}
 	// copy i to j and indicate complete copy
 	template<iterable I, iterable J>
+		//requires std::output_iterator<J, typename J::value_type>
 	inline bool copy(I i, J j)
 	{
 		for (; i and j; ++i, ++j) {
@@ -163,7 +175,7 @@ namespace fms {
 
 		return !i and !j;
 	}
-
+	
 #ifdef _DEBUG
 
 	bool test_copy()
