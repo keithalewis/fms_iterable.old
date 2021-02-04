@@ -50,16 +50,23 @@ inline auto tuple_star(Is&&... is)
 */
 
 // quicksort i on pivot p
-template<iterable I, class T = typename I::value_type>
-auto qsort(T p, I i)
+template<iterable I>
+auto qsort(I i)
 {
-	return (i & i < p), unit(p); // , (i & i > p);
+	if (!i) {
+		return mask(i, i != i);
+	}
+
+	auto p = *i;
+
+	return (i & (i < p));// , qsort(i & (i >= p)));
 }
 
 bool test_qsort = []() {
 	{
 		int i[] = { 3,2,1,4 };
-		auto s = qsort(take(1, array(i)), array(i));
+		auto s = qsort(array(i));
+		//copy(s, std::ostream_iterator<int>(std::cout, ", "));
 	}
 
 	return true;
@@ -101,6 +108,15 @@ int main()
 		auto i = iota(0);
 		// mask
 		auto o = i & ~(i % 2);
+		assert(o);
+		assert(*o == 0);
+		++o;
+		assert(*o == 2);
+	}
+	{
+		iota i(0);
+		// mask
+		auto o = i & i % 2 == 0;
 		assert(o);
 		assert(*o == 0);
 		++o;

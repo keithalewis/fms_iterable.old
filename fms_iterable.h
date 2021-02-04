@@ -191,6 +191,11 @@ namespace fms {
 
 namespace fms {
 
+#pragma region null
+
+
+#pragma endregion null
+
 #pragma region pointer
 
 	// create an iterable from a random access pointer

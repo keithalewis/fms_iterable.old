@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config>
+    <source_groups>
+        <source_group_a74c46fd-179d-4ca9-a85e-acb1b401a990>
+            <cpp_standard>c++2a</cpp_standard>
+            <cross_compilation>
+                <target>
+                    <abi>unknown</abi>
+                    <arch>x86_64</arch>
+                    <sys>windows</sys>
+                    <vendor>unknown</vendor>
+                </target>
+                <target_options_enabled>1</target_options_enabled>
+            </cross_compilation>
+            <exclude_filters>
+                <exclude_filter>Debug</exclude_filter>
+                <exclude_filter>x64</exclude_filter>
+            </exclude_filters>
+            <name>C++ Source Group</name>
+            <pch_flags>
+                <use_compiler_flags>1</use_compiler_flags>
+            </pch_flags>
+            <source_extensions>
+                <source_extension>.cpp</source_extension>
+                <source_extension>.cxx</source_extension>
+                <source_extension>.cc</source_extension>
+            </source_extensions>
+            <source_paths>
+                <source_path>./</source_path>
+            </source_paths>
+            <status>enabled</status>
+            <type>C++ Source Group</type>
+        </source_group_a74c46fd-179d-4ca9-a85e-acb1b401a990>
+    </source_groups>
+    <version>8</version>
+</config>
