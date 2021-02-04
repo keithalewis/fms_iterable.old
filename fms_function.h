@@ -6,11 +6,11 @@ namespace fms {
 
 #pragma region all
 
-	// every element is convertible to true
+	// return end or first false element
 	template<iterable I>
-	inline constexpr bool all(I i)
+	inline constexpr I all(I i)
 	{
-		return !i ? true : *i and all(++i);
+		return !i or !*i ? i : all(++i);
 	}
 
 #ifdef _DEBUG
@@ -23,10 +23,20 @@ namespace fms {
 		for (auto i : is) {
 			if (!i) {
 				b = false;
+				break;
 			}
 		}
 
-		assert(b == all(is));
+		auto as = all(is);
+
+		if (b) {
+			assert(!as);
+			assert(as == is.end());
+		}
+		else {
+			assert(as);
+			assert(!*as);
+		}
 	}
 
 #endif // _DEBUG
@@ -35,11 +45,11 @@ namespace fms {
 
 #pragma region any
 
-	// some element is convertible to true
+	// return end or first true element
 	template<iterable I>
-	inline constexpr bool any(I i)
+	inline constexpr I any(I i)
 	{
-		return !i ? false : *i or any(++i);
+		return !i or *i ? i : any(++i);
 	}
 
 #ifdef _DEBUG
@@ -50,12 +60,22 @@ namespace fms {
 		bool b = false; // any({}) = false
 
 		for (auto i : is) {
-			if (!i) {
+			if (i) {
 				b = true;
+				break;
 			}
 		}
 
-		assert(b == any(is));
+		auto as = any(is);
+
+		if (!b) {
+			assert(!as);
+			assert(as == is.end());
+		}
+		else {
+			assert(as);
+			assert(*as);
+		}
 	}
 
 #endif // _DEBUG

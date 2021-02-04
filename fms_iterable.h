@@ -4,11 +4,12 @@
 #include <cassert>
 #endif
 #include <cmath>
+#include <compare>
 #include <concepts>
 #include <functional>
 #include <iterator>
 #include <limits>
-#include <optional>
+//#include <optional>
 #include <numeric>
 #include <utility>
 
@@ -87,7 +88,7 @@ namespace fms {
 	{
 		return i;
 	}
-	// "...but each iterable ends in its own fashion."
+	// "...but each iterable ends after its own fashion."
 	template<iterable I>
 	inline auto end(const I& i)
 	{
@@ -107,6 +108,34 @@ namespace fms {
 		}
 
 		return !i and !j;
+	}
+	// three way compare
+	template<iterable I, iterable J>
+	inline auto compare(I i, J j)
+	{
+		while (i and j) {
+			auto cmp = *i <=> *j;
+			if (cmp != 0) {
+				return cmp;
+			}
+			++i;
+			++j;
+		}
+
+		if (i) { // greater
+			typename I::value_type one(1), zero(0);
+			return one <=> zero;
+		}
+		else if (j) { // less
+			typename J::value_type one(1), zero(0);
+			return zero <=> one;
+		}
+		else {
+			typename I::value_type izero(0);
+			typename J::value_type jzero(0);
+
+			return izero <=> jzero;
+		}
 	}
 
 	/*
@@ -200,8 +229,10 @@ namespace fms {
 
 	// create an iterable from a random access pointer
 	// `explicit operator bool() const` is always dangerously true
+	// nullptr gives 'empty' class
 	template<class T>
 	class pointer {
+	protected:
 		T* p;
 	public:
 		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
@@ -222,7 +253,7 @@ namespace fms {
 
 		explicit operator bool() const
 		{
-			return true; // does not check if valid
+			return p ? true : false; // does not check if valid
 		}
 		auto end() const
 		{
@@ -348,6 +379,15 @@ namespace fms {
 			assert(*p++ == i[1]);
 			assert(*p == i[2]);
 		}
+		{
+			pointer<int> e; // empty
+			assert(!e);
+			assert(e == begin(e));
+			assert(e == end(e));
+			assert(0 == length(e));
+			assert(equal(e, e));
+			assert(compare(e, e) == 0);
+		}
 
 		return true;
 	}
@@ -355,6 +395,115 @@ namespace fms {
 #endif // _DEBUG
 
 #pragma endregion pointer
+
+#pragma region take
+
+	// take first (>0) or last (<0) n items
+	// same as done(countdown(n), i)
+	template<iterable I>
+	class take : public I {
+		size_t n;
+	public:
+		using iterator_concept = typename I::iterator_concept; 
+		using iterator_category = typename I::iterator_category;
+		using difference_type = typename I::difference_type;
+		using value_type = typename I::value_type;
+		using reference = typename I::reference;
+
+		take()
+			: I{}, n(0)
+		{ }
+		take(long n, const I& i)
+			: I(i), n(n)
+		{ }
+
+		// remaining size
+		size_t size() const
+		{
+			return n;
+		}
+
+		auto operator<=>(const take&) const = default;
+
+		explicit operator bool() const
+		{
+			return n != 0;
+		}
+		auto end() const
+		{
+			return take(0, skip(n, *this));
+		}
+
+		using I::operator*;
+
+		take& operator++()
+		{
+			if (*this) {
+				--n;
+				I::operator++();
+			}
+
+			return *this;
+		}
+		take& operator++(int)
+		{
+			if (*this) {
+				take t_ = *this;
+				--n;
+				I::operator++();
+				return t_;
+			}
+
+			return *this;
+		}
+		//if constexpr (...) operator++(int) ...
+	};
+
+
+#ifdef _DEBUG
+
+	template<typename T>
+	inline bool test_take()
+	{
+		{
+			auto t = take(2, iota<T>{});
+			auto t2(t);
+			t = t2;
+			assert(t);
+			assert(length(t) == 2);
+			assert(*t == 0);
+			++t;
+
+			assert(t);
+			assert(length(t) == 1);
+			assert(*t == 1);
+			++t;
+
+			assert(!t);
+			assert(size(t) == 0);
+		}
+		{
+			auto t3 = take(3, iota<int>(0));
+			size_t n = 0;
+			for (const auto& t : t3) {
+				++n;
+			}
+			assert(n == 3);
+			assert(3 == size(t3));
+		}
+		{
+			auto t0 = take(0, iota<int>(0));
+			assert(!t0);
+			assert(0 == length(t0));
+			assert(equal(t0, pointer<int>{}));
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion take
 
 #pragma region constant
 
@@ -435,6 +584,13 @@ namespace fms {
 		}
 	};
 
+	// length 1 iterable {t}
+	template<class T>
+	inline auto unit(const T& t)
+	{
+		return take(1, constant(t));
+	}
+
 } // namespace fms
 
 template<typename T>
@@ -484,6 +640,19 @@ namespace fms {
 			assert(*c == 1);
 			assert(1 == *c);
 			assert(begin(c) != end(c));
+		}
+		{
+			auto u = unit(3);
+			auto u2(u);
+			assert(u2);
+			u = u2;
+			assert(equal(u, u2));
+			assert(length(u) == 1);
+			assert(*u == 3);
+			*u = 4;
+			assert(4 == *u);
+			++u;
+			assert(!u);
 		}
 
 		return true;
@@ -635,9 +804,65 @@ namespace fms {
 
 #pragma endregion array
 
+#pragma region list
+
+	// create from initializer_list
+	template<typename T>
+	class list : public array<T> {
+		std::vector<T> a;
+	public:
+		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
+		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
+		using difference_type = typename std::iterator_traits<T*>::difference_type;
+		using reference = typename T&;
+		using value_type = T;
+
+		list()
+			: array<T>(0, nullptr)
+		{ }
+		list(std::initializer_list<T> as)
+			: array<T>(as.size(), nullptr), a(as)
+		{
+			pointer<T>::p = a.data();
+		}
+		list(const list&) = default;
+		list& operator=(const list&) = default;
+		~list()
+		{ }
+
+		using array<T>::operator<=>;
+		using array<T>::end;
+		using array<T>::operator bool;
+		using array<T>::operator*;
+		using array<T>::operator++;
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_list()
+	{
+		{
+			list l({ 1,2,3 });
+			assert(l);
+			auto l2(l);
+			assert(l2);
+			assert(l2 == l);
+			//assert(equal(l, l2));
+			l = l2;
+			assert(!(l != l2));
+			assert(length(l) == 3);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion list
+
 #pragma region null
 	
-	// use zero value ends iterable
+	// zero value ends iterable
 	template<iterable I>
 	struct null : public I {
 		null()
@@ -698,116 +923,6 @@ namespace fms {
 
 #pragma endregion null
 
-#pragma region take
-
-	// take first (>0) or last (<0) n items
-	// same as done(countdown(n), i)
-	template<iterable I>
-	class take : public I {
-		size_t n;
-	public:
-		using iterator_concept = std::forward_iterator_tag; //!!! I::iterator_concept
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = typename I::value_type;
-
-		take()
-			: I{}, n(0)
-		{ }
-		take(long n, const I& i)
-			: I(i), n(n)
-		{ }
-
-		// remaining size
-		size_t size() const
-		{
-			return n;
-		}
-
-		auto operator<=>(const take&) const = default;
-
-		explicit operator bool() const
-		{
-			return n != 0;
-		}
-		auto end() const
-		{
-			return take(0, skip(n, *this)); //!!! get rid of skip
-		}
-
-		using I::operator*;
-
-		take& operator++()
-		{
-			if (*this) {
-				--n;
-				I::operator++();
-			}
-
-			return *this;
-		}
-		//??? constexp operators/enable_if/requires
-	};
-	// iterator with one item
-	template<class T>
-	inline auto unit(T t)
-	{
-		return take(1, constant(t));
-	}
-	/*
-	// e.g., take_(3)(iota<int>(0))
-	template<iterable I>
-	inline auto take_(long n)
-	{
-		return [n](const I& i) { return take<I>(n, i); };
-	}
-	*/
-
-
-#ifdef _DEBUG
-
-	template<typename T>
-	inline bool test_take()
-	{
-		{
-			auto t = take(2, iota<T>{});
-			auto t2(t);
-			t = t2;
-			assert(t);
-			assert(length(t) == 2);
-			assert(*t == 0);
-			++t;
-
-			assert(t);
-			assert(length(t) == 1);
-			assert(*t == 1);
-			++t;
-
-			assert(!t);
-			assert(size(t) == 0);
-		}
-		{
-			auto t3 = take(3, iota<int>(0));
-			size_t n = 0;
-			for (const auto& t : t3) {
-				++n;
-			}
-			assert(n == 3);
-			assert(3 == size(t3));
-		}
-		{
-			auto u = unit(1);
-			assert(u);
-			assert(*u == 1);
-			++u;
-			assert(!u);
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-#pragma endregion take
 
 #pragma region done
 
@@ -1559,6 +1674,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 				take(4, iota<int>(0))
 			));
 		}
+		/*
 		{
 			join j(unit(1), unit(2));
 			assert(j);
@@ -1576,7 +1692,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 			++j;
 			assert(!j);
 		}
-
+		*/
 		return true;
 	}
 

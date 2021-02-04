@@ -18,6 +18,7 @@ namespace fms {
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
 		using difference_type = ptrdiff_t;
+		using reference = T&;
 		using value_type = T;
 
 		iota(T t = 0)
@@ -40,6 +41,10 @@ namespace fms {
 		}
 
 		value_type operator*() const
+		{
+			return t;
+		}
+		reference operator*()
 		{
 			return t;
 		}

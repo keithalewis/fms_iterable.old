@@ -53,9 +53,9 @@ inline auto tuple_star(Is&&... is)
 template<iterable I>
 auto qsort(I i)
 {
-	if (!i) {
-		return mask(i, i != i);
-	}
+	//if (!i) {
+	//	return take(0,i);
+	//}
 
 	auto p = *i;
 
