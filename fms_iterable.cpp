@@ -8,6 +8,7 @@ using namespace fms;
 
 bool test_pointer_ = test_pointer();
 bool test_array_i = test_array<int>();
+bool test_list_ = test_list();
 //bool test_iota_ = test_iota();
 bool test_null_ = test_null();
 bool test_constant_i = test_constant<int>();
@@ -49,23 +50,27 @@ inline auto tuple_star(Is&&... is)
 }
 */
 
-// quicksort i on pivot p
-template<iterable I>
-auto qsort(I i)
-{
-	//if (!i) {
-	//	return take(0,i);
-	//}
-
-	auto p = *i;
-
-	return (i & (i < p));// , qsort(i & (i >= p)));
-}
+// quicksort i on pivot first element
+template<iterable I, class T = typename I::value_type>
+struct quicksort : public I {
+	struct delay {
+		auto get() {
+			struct result {
+				operator I()
+				{
+					return delay->get_I();
+				}
+				delay* delay;
+			};
+			return result(*this);
+		}
+	};
+};
 
 bool test_qsort = []() {
 	{
 		int i[] = { 3,2,1,4 };
-		auto s = qsort(array(i));
+		//auto s = qsort(array(i));
 		//copy(s, std::ostream_iterator<int>(std::cout, ", "));
 	}
 

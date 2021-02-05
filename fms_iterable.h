@@ -90,7 +90,7 @@ namespace fms {
 	}
 	// "...but each iterable ends after its own fashion."
 	template<iterable I>
-	inline auto end(const I& i)
+	inline auto end(const I& i) -> decltype(i.end())
 	{
 		return i.end();
 	}
@@ -238,7 +238,7 @@ namespace fms {
 		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
 		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
 		using difference_type = typename std::iterator_traits<T*>::difference_type;
-		using reference = typename T&;
+		using reference = T&;
 		using value_type = T;
 
 		pointer(T* p = nullptr)
@@ -255,7 +255,7 @@ namespace fms {
 		{
 			return p ? true : false; // does not check if valid
 		}
-		auto end() const
+		pointer end() const
 		{
 			return pointer(nullptr);
 		}
@@ -396,6 +396,225 @@ namespace fms {
 
 #pragma endregion pointer
 
+#pragma region array
+
+	template<class T>
+	class array : public pointer<T> {
+		size_t n;
+	public:
+		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
+		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
+		using difference_type = typename std::iterator_traits<T*>::difference_type;
+		using reference = T&;
+		using value_type = T;
+
+		array()
+			: pointer<T>(nullptr), n(0)
+		{ }
+		array(size_t n, const pointer<T>& a)
+			: pointer<T>(a), n(n)
+		{ }
+		array(size_t n, T* a)
+			: pointer<T>(a), n(n)
+		{ }
+		template<size_t N>
+		array(T(&a)[N])
+			: array(N, a)
+		{ }
+		array(const array&) = default;
+		array& operator=(const array&) = default;
+		~array()
+		{ }
+
+		// remaining size
+		size_t size() const
+		{
+			return n;
+		}
+
+		auto operator<=>(const array&) const = default;
+
+		explicit operator bool() const
+		{
+			return n != 0;
+		}
+		array end() const
+		{
+			return array(0, pointer<T>::p + n);
+		}
+
+		using pointer<T>::operator*;
+
+		array& operator++()
+		{
+			if (*this) {
+				--n;
+				pointer<T>::operator++();
+			}
+
+			return *this;
+		}
+
+		//!!! overide operator+=, etc
+	};
+
+#ifdef _DEBUG
+
+	template<class T>
+	inline bool test_array()
+	{
+		{
+			array<T> a;
+			auto a2(a);
+			a = a2;
+			assert(a == a2);
+			assert(!(a2 != a));
+			assert(a.size() == 0);
+			assert(!a);
+			++a;
+			assert(a.size() == 0);
+			assert(!a);
+		}
+		{
+			T a_[] = { 1,2,3 };
+			array<T> a(a_);
+			auto a2(a);
+			a = a2;
+			assert(a == a2);
+			assert(!(a2 != a));
+
+			assert(a.size() == 3);
+			assert(a);
+			assert(*a == 1);
+
+			++a;
+			assert(a.size() == 2);
+			assert(a);
+			assert(*a == 2);
+
+			++a;
+			assert(a.size() == 1);
+			assert(a);
+			assert(*a == 3);
+
+			++a;
+			assert(a.size() == 0);
+			assert(!a);
+
+			++a;
+			assert(a.size() == 0);
+			assert(!a);
+		}
+		{
+			T a_[] = { 1,2,3 };
+			array<T> a(a_);
+
+			auto a0 = *a;
+			for (const auto& ai : a) {
+				assert(ai == a0);
+				++a0;
+			}
+		}
+		{
+			T a_[] = { 1,2,3 };
+			array<T> a(a_);
+			assert(6 == std::accumulate(begin(a), end(a), 0));
+		}
+		{
+			T a_[] = { 1,2,3 };
+			array<T> a(3, pointer(a_));
+			T s = 0;
+			for (auto i : a) {
+				s += i;
+			}
+			assert(6 == s);
+		}
+
+		return true;
+	}
+
+
+#endif // _DEBUG
+
+#pragma endregion array
+
+#pragma region list
+
+	// create from initializer_list
+	template<typename T>
+	class list : public array<T> {
+		std::vector<T> a;
+	public:
+		using iterator_concept = typename array<T>::iterator_concept;
+		using iterator_category = typename array<T>::iterator_category;
+		using difference_type = typename array<T>::difference_type;
+		using reference = T&;
+		using value_type = T;
+
+		list()
+			: array<T>(0, nullptr)
+		{ }
+		list(std::initializer_list<T> as)
+			: array<T>(as.size(), nullptr), a(as)
+		{
+			pointer<T>::p = a.data();
+		}
+		list(const list&) = default;
+		list& operator=(const list&) = default;
+		~list()
+		{ }
+		/*
+		using array<T>::operator<=>;
+		using array<T>::end;
+		using array<T>::operator bool;
+		using pointer<T>::operator*;
+		using array<T>::operator++;
+		*/
+		//??? covariant return type not available
+		list& operator++()
+		{
+			array<T>::operator++();
+
+			return *this;
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_list()
+	{
+		{
+			list l({ 1,2,3 });
+			assert(l);
+			auto l2(l);
+			assert(l2);
+			assert(l2 == l);
+			//assert(equal(l, l2));
+			l = l2;
+			assert(!(l != l2));
+			//assert(size(l) == 3);
+
+			assert(*l == 1);
+			++l;
+			assert(*l == 2);
+			++l;
+			assert(*l == 3);
+			++l;
+			assert(!l);
+		}
+		{
+			list l({ 1,2,3 });
+			assert(size(l) == 3);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion list
+
+
 #pragma region take
 
 	// take first (>0) or last (<0) n items
@@ -429,7 +648,7 @@ namespace fms {
 		{
 			return n != 0;
 		}
-		auto end() const
+		take end() const
 		{
 			return take(0, skip(n, *this));
 		}
@@ -514,7 +733,7 @@ namespace fms {
 		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
 		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
 		using difference_type = typename std::iterator_traits<T*>::difference_type;
-		using reference = typename T&;
+		using reference = T&;
 		using value_type = T;
 
 		constant()
@@ -534,9 +753,9 @@ namespace fms {
 		{
 			return true;
 		}
-		auto end() const
+		constant end() const
 		{
-			return std::numeric_limits<T>::max(); //??? what else
+			return constant(std::numeric_limits<T>::max()); //??? what else
 		}
 
 		value_type operator*() const
@@ -662,203 +881,6 @@ namespace fms {
 
 #pragma endregion constant
 
-#pragma region array
-
-	template<class T>
-	class array : public pointer<T> {
-		size_t n;
-	public:
-		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
-		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
-		using difference_type = typename std::iterator_traits<T*>::difference_type;
-		using reference = typename T&;
-		using value_type = T;
-
-		array()
-			: pointer<T>(nullptr), n(0)
-		{ }
-		array(size_t n, const pointer<T>& a)
-			: pointer<T>(a), n(n)
-		{ }
-		array(size_t n, T* a)
-			: pointer<T>(a), n(n)
-		{ }
-		template<size_t N>
-		array(T(&a)[N])
-			: array(N, a)
-		{ }
-		array(const array&) = default;
-		array& operator=(const array&) = default;
-		~array()
-		{ }
-
-		// remaining size
-		size_t size() const
-		{
-			return n;
-		}
-
-		auto operator<=>(const array&) const = default;
-
-		explicit operator bool() const
-		{
-			return n != 0;
-		}
-		auto end() const
-		{
-			return array(0, *this + n);
-		}
-
-		using pointer<T>::operator*;
-		
-		array& operator++()
-		{
-			if (*this) {
-				--n;
-				pointer<T>::operator++();
-			}
-
-			return *this;
-		}
-
-		//!!! overide operator+=, etc
-	};
-
-#ifdef _DEBUG
-
-	template<class T>
-	inline bool test_array()
-	{
-		{
-			array<T> a;
-			auto a2(a);
-			a = a2;
-			assert(a == a2);
-			assert(!(a2 != a));
-			assert(a.size() == 0);
-			assert(!a);
-			++a;
-			assert(a.size() == 0);
-			assert(!a);
-		}
-		{
-			T a_[] = { 1,2,3 };
-			array<T> a(a_);
-			auto a2(a);
-			a = a2;
-			assert(a == a2);
-			assert(!(a2 != a));
-
-			assert(a.size() == 3);
-			assert(a);
-			assert(*a == 1);
-
-			++a;
-			assert(a.size() == 2);
-			assert(a);
-			assert(*a == 2);
-
-			++a;
-			assert(a.size() == 1);
-			assert(a);
-			assert(*a == 3);
-
-			++a;
-			assert(a.size() == 0);
-			assert(!a);
-
-			++a;
-			assert(a.size() == 0);
-			assert(!a);
-		}
-		{
-			T a_[] = { 1,2,3 };
-			array<T> a(a_);
-
-			auto a0 = *a;
-			for (const auto& ai : a) {
-				assert(ai == a0);
-				++a0;
-			}
-		}
-		{
-			T a_[] = { 1,2,3 };
-			array<T> a(a_);
-			assert(6 == std::accumulate(begin(a), end(a), 0));
-		}
-		{
-			T a_[] = { 1,2,3 };
-			array<T> a(3, pointer(a_));
-			T s = 0;
-			for (auto i : a) {
-				s += i;
-			}
-			assert(6 == s);
-		}
-
-		return true;
-	}
-
-
-#endif // _DEBUG
-
-#pragma endregion array
-
-#pragma region list
-
-	// create from initializer_list
-	template<typename T>
-	class list : public array<T> {
-		std::vector<T> a;
-	public:
-		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
-		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
-		using difference_type = typename std::iterator_traits<T*>::difference_type;
-		using reference = typename T&;
-		using value_type = T;
-
-		list()
-			: array<T>(0, nullptr)
-		{ }
-		list(std::initializer_list<T> as)
-			: array<T>(as.size(), nullptr), a(as)
-		{
-			pointer<T>::p = a.data();
-		}
-		list(const list&) = default;
-		list& operator=(const list&) = default;
-		~list()
-		{ }
-
-		using array<T>::operator<=>;
-		using array<T>::end;
-		using array<T>::operator bool;
-		using array<T>::operator*;
-		using array<T>::operator++;
-	};
-
-#ifdef _DEBUG
-
-	inline bool test_list()
-	{
-		{
-			list l({ 1,2,3 });
-			assert(l);
-			auto l2(l);
-			assert(l2);
-			assert(l2 == l);
-			//assert(equal(l, l2));
-			l = l2;
-			assert(!(l != l2));
-			assert(length(l) == 3);
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-#pragma endregion list
 
 #pragma region null
 	
@@ -883,7 +905,7 @@ namespace fms {
 	{
 		auto test_abc = [](auto n)
 		{
-			static_assert(std::is_same_v<decltype(n)::value_type, const char>);
+			static_assert(std::is_same_v<typename decltype(n)::value_type, const char>);
 			assert(n);
 			assert(*n == 'a');
 
@@ -944,7 +966,7 @@ namespace fms {
 		{
 			return !I::operator==(e);
 		}
-		auto end() const
+		done end() const
 		{
 			return done(e, e);
 		}
@@ -990,7 +1012,7 @@ namespace fms {
 		{
 			return e != i.end();
 		}
-		auto end() const
+		scan end() const
 		{
 			return scan(e, e);
 		}
@@ -1062,7 +1084,7 @@ namespace fms {
 		}
 
 		using I::operator bool;
-		auto end() const
+		when end() const
 		{
 			return when(p, I::end());
 		}
@@ -1184,7 +1206,7 @@ namespace fms {
 		{
 			return true;
 		}
-		auto end() const
+		cycle end() const
 		{
 			return cycle(i.end()); // I::operator==(end()) always false
 		}
@@ -1231,7 +1253,7 @@ namespace fms {
 		{
 			return !!I(*this) and !p(*this);
 		}
-		auto end() const
+		until end() const
 		{
 			return until(p, I::end());
 		}
@@ -1408,7 +1430,7 @@ namespace fms {
 	public:
 		using iterator_concept = typename I::iterator_concept;
 		using iterator_category = typename I::iterator_category;
-		using value_type = typename U;
+		using value_type = U;
 
 		apply()
 		{ }
@@ -1424,7 +1446,7 @@ namespace fms {
 		{
 			return i == a.i; // f == a.f must be true;
 		}
-		auto end() const
+		apply end() const
 		{
 			return apply(f, i.end());
 		}
@@ -1450,7 +1472,7 @@ namespace fms {
 	{
 		{
 			iota<int> i;
-			apply a(std::negate{}, i);
+			apply a(std::negate<int>{}, i);
 			auto a2(a);
 			a = a2;
 			assert(a == a2);
@@ -1473,7 +1495,7 @@ namespace fms {
 			assert(*a == -1);
 		}
 		{
-			apply a(std::negate{}, iota<int>{});
+			apply a(std::negate<int>{}, iota<int>{});
 			apply b([](int i) { return -i; }, iota<int>{});
 			for (int i : {1, 2, 3}) {
 				assert(*++a == -i); 
@@ -1481,7 +1503,7 @@ namespace fms {
 			}
 		}
 		{
-			apply a(std::negate{}, iota<int>{});
+			apply a(std::negate<int>{}, iota<int>{});
 			int i = 0;
 			for (auto ai = begin(a); ai != end(a); ++ai) {
 				assert(*ai == -i);
@@ -1491,7 +1513,7 @@ namespace fms {
 			}
 		}
 		{
-			apply a(std::negate{}, iota<int>{});
+			apply a(std::negate<int>{}, iota<int>{});
 			int i = 0;
 			for (auto ai : a) {
 				assert(ai == -i);
@@ -1637,7 +1659,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 		{
 			return i or j;
 		}
-		auto end() const
+		join end() const
 		{
 			return join(i.end(), j.end());
 		}
@@ -1780,7 +1802,7 @@ FMS_ARITHMETIC_OPS(ITERABLE_ARITHMETIC)
 	inline bool test_fold()
 	{
 		{
-			fold f(std::plus{}, iota<int>{}, 2);
+			fold f(std::plus<int>{}, iota<int>{}, 2);
 			auto f2(f);
 			f = f2;
 			assert(f == f2);
