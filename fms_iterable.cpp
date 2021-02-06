@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include "fms_iterable.h"
-
+#include "fms_tuple.h"
 
 using namespace fms;
 
@@ -35,6 +35,14 @@ bool test_copy = []() {
 
 /*
 template<class... Is>
+inline constexpr auto make_lift(Is&&... is)
+	return[...is = std::reference_wrapper<Is>{ static_cast<Is&&>(is) }](auto&& f) mutable -> decltype(auto)
+	{
+		return decltype(f)(f)(is.type...);
+	};
+}
+
+template<class... Is>
 inline auto tuple_incr(Is&&... is)
 {
 	return [&...is = std::forward<Is>(is)]() {
@@ -51,6 +59,7 @@ inline auto tuple_star(Is&&... is)
 */
 
 // quicksort i on pivot first element
+/*
 template<iterable I, class T = typename I::value_type>
 struct quicksort : public I {
 	struct delay {
@@ -76,9 +85,46 @@ bool test_qsort = []() {
 
 	return true;
 }();
+*/
+
+template<class... Is>
+inline constexpr auto make_lift(Is&&... is) {
+	return [&...is = std::forward<Is>(is)](auto&& f) mutable -> decltype(auto)
+	{
+		return f(is...);
+	};
+}
+
+template<class I>
+inline constexpr void incr(I& i)
+{
+	++i;
+}
+template<class I, class... Is>
+inline constexpr void incr(I& i, Is&... is)
+{
+	++i;
+	incr(is...);
+}
 
 int main()
 {
+	{
+		iota i0(0), i1(1);
+		incr(i0, i1);
+		assert(*i0 == 1 and *i1 == 2);
+		auto l = make_lift(i0, i1);
+		auto printer = [](auto&... args) {
+			((std::cout << *args << " "), ...);
+		};
+		l(printer);
+		l([](auto&... is) { return incr(is...); });
+		assert(*i0 == 2 and *i1 == 3);
+		int i;
+		i = 0;
+		
+
+	}
 	constexpr double eps = std::numeric_limits<double>::epsilon();
 	{
 		double x = 1;
