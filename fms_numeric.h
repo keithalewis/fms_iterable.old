@@ -1,62 +1,60 @@
 // fms_numeric.h - iterators for numerical types
-#pragma once
 #include <compare>
 #include "fms_iterable.h"
 
+#define FMS_ARITHMETIC_OPS(X)     \
+	X(+, add, std::plus)          \
+	X(-, sub, std::minus)         \
+	X(*, mul, std::multiplies)    \
+	X(/, div, std::divides)       \
+	X(%, mod, std::modulus)       \
+
+#define FMS_COMPARISON_OPS(X)     \
+	X(==, eq, std::equal_to)      \
+	X(!=, ne, std::not_equal_to)  \
+	X(> , gt, std::greater)       \
+	X(< , lt, std::less)          \
+	X(>=, ge, std::greater_equal) \
+	X(<=, le, std::less_equal)    \
+
+#define FMS_LOGICAL_OPS(X)        \
+	X(&&, and, std::logical_and)  \
+	X(||, or ,std::logical_or)    \
+
+#define FMS_BITWISE_OPS(X)        \
+	X(&, AND, std::bit_and)       \
+	X(|, OR , std::bit_or)        \
+	X(^, XOR, std::bit_xor)       \
+
 namespace fms {
 
-#pragma region iota
+	namespace {
+		// relations
+		template<typename I, class R>
+		struct relation {
+			using T = typename I::value_type;
+			T t;
+			relation(const T& t)
+				: t(t)
+			{ }
+			bool operator()(const I& i) const
+			{
+				return R{}(*i, t);
+			}
+		};
+	}
 
-	//??? replace by fold(incr, constant(0))
-	// arithmetic series
-	// {t, t + 1, ... }
-	template<typename T>
-	class iota {
-		T t;
-	public:
-		//??? random access
-		using iterator_concept = std::forward_iterator_tag;
-		using iterator_category = std::forward_iterator_tag;
-		using difference_type = ptrdiff_t;
-		using reference = T&;
-		using value_type = T;
+	/*
+	//!!! move to namespace
+	#define UNTIL_COMPARISON(a,b,c) \
+		template<typename I, class T = typename I::value_type> \
+		using b = relation<I, c<T>>; \
 
-		iota(T t = 0)
-			: t(t)
-		{ }
-		iota(const iota&) = default;
-		iota& operator=(const iota&) = default;
-		~iota()
-		{ }
+		FMS_COMPARISON_OPS(UNTIL_COMPARISON)
+	#undef UNTIL_COMPARISON
+	*/
 
-		auto operator<=>(const iota& i) const = default;
 
-		explicit operator bool() const
-		{
-			return true;
-		}
-		auto end() const
-		{
-			return iota(std::numeric_limits<T>::max());
-		}
-
-		value_type operator*() const
-		{
-			return t;
-		}
-		reference operator*()
-		{
-			return t;
-		}
-		iota& operator++()
-		{
-			++t;
-
-			return *this;
-		}
-	};
-
-#pragma endregion iota
 #pragma region power
 
 	// geometric series

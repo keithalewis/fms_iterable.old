@@ -1,5 +1,4 @@
 // fms_function.h - functions for iterables
-#pragma once
 #include "fms_iterable.h"
 
 namespace fms {

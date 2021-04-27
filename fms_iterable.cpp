@@ -2,14 +2,26 @@
 #include <cassert>
 #include <iostream>
 #include "fms_iterable.h"
-#include "fms_tuple.h"
 
 using namespace fms;
 
-bool test_pointer_ = test_pointer();
+bool test_interval_i = test_interval<int>();
+bool test_interval_f = test_interval<float>();
+bool test_interval_d = test_interval<double>();
+
+bool test_iota_i = test_iota<int>();
+bool test_iota_f = test_iota<float>();
+bool test_iota_d = test_iota<double>();
+
+bool test_equal_ = test_equal();
+bool test_compare_ = test_compare();
 bool test_array_i = test_array<int>();
+bool test_array_f = test_array<float>();
+bool test_array_d = test_array<double>();
+
+/*
+bool test_pointer_ = test_pointer();
 bool test_list_ = test_list();
-//bool test_iota_ = test_iota();
 bool test_null_ = test_null();
 bool test_constant_i = test_constant<int>();
 bool test_until_ = test_until();
@@ -33,7 +45,7 @@ bool test_copy = []() {
 	return true;
 }();
 
-/*
+
 template<class... Is>
 inline constexpr auto make_lift(Is&&... is)
 	return[...is = std::reference_wrapper<Is>{ static_cast<Is&&>(is) }](auto&& f) mutable -> decltype(auto)
@@ -85,7 +97,7 @@ bool test_qsort = []() {
 
 	return true;
 }();
-*/
+
 
 template<class... Is>
 inline constexpr auto make_lift(Is&&... is) {
@@ -106,9 +118,10 @@ inline constexpr void incr(I& i, Is&... is)
 	++i;
 	incr(is...);
 }
-
+*/
 int main()
 {
+	/*
 	{
 		iota i0(0), i1(1);
 		incr(i0, i1);
@@ -177,6 +190,7 @@ int main()
 		//??? ostream_joiner
 		copy(take(3, iota(0)), std::ostream_iterator<int>(std::cout, ", "));
 	}
+	*/
 
 	return 0;
 }

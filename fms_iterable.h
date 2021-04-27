@@ -1,84 +1,33 @@
 // fms_iterable.h - iterators with `explicit operator bool() const`
-#pragma once
+//#pragma once
 #ifdef _DEBUG
 #include <cassert>
 #endif
-#include <cmath>
 #include <compare>
 #include <concepts>
-#include <functional>
+//#include <functional>
 #include <iterator>
 #include <limits>
-//#include <optional>
 #include <numeric>
-#include <utility>
+//#include <utility>
 
 // to make tests return false instead of abort
 // #define assert(e) if (!(e)) { return false; }
 
-#define FMS_ARITHMETIC_OPS(X)     \
-	X(+, add, std::plus)          \
-	X(-, sub, std::minus)         \
-	X(*, mul, std::multiplies)    \
-	X(/, div, std::divides)       \
-	X(%, mod, std::modulus)       \
-
-#define FMS_COMPARISON_OPS(X)     \
-	X(==, eq, std::equal_to)      \
-	X(!=, ne, std::not_equal_to)  \
-	X(> , gt, std::greater)       \
-	X(< , lt, std::less)          \
-	X(>=, ge, std::greater_equal) \
-	X(<=, le, std::less_equal)    \
-
-#define FMS_LOGICAL_OPS(X)        \
-	X(&&, and, std::logical_and)  \
-	X(||, or ,std::logical_or)    \
-
-#define FMS_BITWISE_OPS(X)        \
-	X(&, AND, std::bit_and)       \
-	X(|, OR , std::bit_or)        \
-	X(^, XOR, std::bit_xor)       \
-
-namespace {
-	// relations
-	template<typename I, class R>
-	struct relation {
-		using T = typename I::value_type;
-		T t;
-		relation(const T& t)
-			: t(t)
-		{ }
-		bool operator()(const I& i) const
-		{
-			return R{}(*i, t);
-		}
-	};
-}
-
-/*
-//!!! move to namespace
-#define UNTIL_COMPARISON(a,b,c) \
-	template<typename I, class T = typename I::value_type> \
-	using b = relation<I, c<T>>; \
-	
-	FMS_COMPARISON_OPS(UNTIL_COMPARISON)
-#undef UNTIL_COMPARISON
-*/
-
 namespace fms {
 
 	template<class I>
-	concept iterable = 
-		requires (I i) {
+	concept iterable = requires (I i) {
 		//std::is_base_of_v<std::forward_iterator_tag, typename I::interator_category>;
 		//typename I::iterator_concept;
-		typename I::iterator_category;
+		//typename I::iterator_category;
+		//typename I::difference_type;
 		typename I::value_type;
+		//typename I::reference;
 		{ !!i } -> std::same_as<bool>;
 		{  *i } -> std::convertible_to<typename I::value_type>;
 		{ ++i } -> std::same_as<I&>;
-		//{ i.operator==(i) const } -> std::same_as<bool>;
+		//{ i.operator<=>(i) };
 		//{ i.end() } -> std::same_as<I>;
 	};
 
@@ -99,122 +48,504 @@ namespace fms {
 	template<iterable I, iterable J>
 	inline bool equal(I i, J j)
 	{
-		while (i and j) {
+		for (; i and j; ++i, ++j) {
 			if (*i != *j) {
 				return false;
 			}
-			++i;
-			++j;
 		}
 
 		return !i and !j;
 	}
-	// three way compare
+
+	// three way lexicographical compare
 	template<iterable I, iterable J>
 	inline auto compare(I i, J j)
 	{
-		while (i and j) {
+		for (; i and j; ++i, ++j) {
 			auto cmp = *i <=> *j;
 			if (cmp != 0) {
 				return cmp;
 			}
-			++i;
-			++j;
 		}
 
-		if (i) { // greater
-			typename I::value_type one(1), zero(0);
-			return one <=> zero;
-		}
-		else if (j) { // less
-			typename J::value_type one(1), zero(0);
-			return zero <=> one;
-		}
-		else {
-			typename I::value_type izero(0);
-			typename J::value_type jzero(0);
+		using T = std::common_type_t<typename I::value_type, typename J::value_type>;
 
-			return izero <=> jzero;
-		}
+		return T(!!i) <=> T(!!j);
 	}
 
-	/*
-	// default iterable policies
-	template<iterable I>
-	inline auto op_bool = [](const I& i) { return !!i; };
-	template<iterable I>
-	inline auto op_true = [](const I&) { return true; };
+#pragma region interval
 
-	template<iterable I>
-	inline auto op_star = [](const I& i) { return *i; };
-	template<iterable I, typename T>
-	inline auto op_static_star = [](const T& t) {
-		return [t](const I&) { static T t; return t; };
-	};
-
-	template<iterable I>
-	inline auto op_incr = [](I& i) { ++i; };
-	template<iterable I>
-	inline auto op_noincr = [](I&) { ; };
-
-	// dependency inject operator bool, star(*), increment(++), and types.
-	template<class I, class OB, class OS, class OI,
-		class CAT = std::forward_iterator_tag,
-		class TYPE = std::invoke_result_t<decltype(&I::operator*)()>>
-	class policy : public I {
-		std::optional<OB> ob;
-		std::optional<OS> os;
-		std::optional<OI> oi;
-		// bypass operator=
-		void assign(const OB& _ob)
-		{
-			ob.reset();
-			if (_ob) {
-				ob.emplace(_ob);
-			}
-		}
-		//...
+	// STL range [*b, *++b, ..., e)
+	template<class I>
+	class interval {
+		I b, e;
 	public:
-		using iterator_concept = typename CAT;
-		using iterator_category = typename CAT;
-		using value_type = typename TYPE;
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		//using iterator_concept = typename I::iterator_concept;
+		//using iterator_category = typename I::iterator_category;
+		using difference_type = typename std::iterator_traits<I>::difference_type;
+		using value_type = typename std::iterator_traits<I>::value_type;
+		using reference = typename std::iterator_traits<I>::reference;
 
-		policy(const I& i, const OB& ob = op_bool, const OS& os = op_star, const OI& oi = op_incr)
-			: I(i), ob(ob), os(os), oi(oi)
+		interval()
 		{ }
-		policy(const policy& p) = default;
-		policy& operator=(const policy& p)
-		{
-			if (this != &p) {
-				ob.reset();
-				if (p.ob) {
-					ob.emplace(p.ob);
-				}
-			}
-
-			return *this;
-		}
-
-
+		interval(I b, I e)
+			: b(b), e(e)
+		{ }
+		auto operator<=>(const interval&) const = default;
 		explicit operator bool() const
 		{
-			return ob(*this);
+			return b != e;
+		}
+		auto end() const
+		{
+			return interval(e, e);
 		}
 		value_type operator*() const
 		{
-			return os(*this);
+			return *b;
 		}
-		policy& operator++()
+		interval& operator++()
 		{
-			oi(*this);
+			if (b != e) {
+				++b;
+			}
 
 			return *this;
 		}
 	};
-	*/
+
+#ifdef _DEBUG
+
+	template<class T>
+	inline bool test_interval()
+	{
+		T t[] = { 0, 1, 2 };
+		{ // ctors, <=>
+			interval<T*> i(t, t + 3);
+			assert(i);
+			auto i2(i);
+			assert(i2);
+			assert(i2 == i);
+			i = i2;
+			assert(i);
+			assert(!(i != i2));
+			assert(i <= i2);
+			assert(!(i < i2));
+			assert(i2 >= i);
+			assert(!(i2 > i));
+		}
+		{
+			interval<T*> i(t + 1, t + 3);
+			assert(i);
+			assert(*i == 1);
+			++i;
+			assert(i);
+			assert(*i == 2);
+		}
+		{
+			interval<T*> i(t, t + 3);
+			assert(i);
+			assert(*i == 0);
+			++i;
+			assert(i);
+			assert(*i == 1);
+			++i;
+			assert(i);
+			assert(*i == 2);
+			++i;
+			assert(!i);
+		}
+		{
+			T u(0);
+			for (auto i : interval<T*>(t, t + 3)) {
+				assert(i == u);
+				++u;
+			}
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion interval
+
+	template<class T>
+	class constant {
+		T t;
+	public:
+		using iterator_concept = std::random_access_iterator_tag;
+		using iterator_category = std::random_access_iterator_tag;
+		using difference_type = ptrdiff_t;
+		using value_type = std::remove_cv_t<T>;
+		using reference = T&;
+
+		constant(T t = std::numeric_limits<T>::max())
+			: t(t)
+		{ }
+		auto operator<=>(const constant&) const = default;
+		explicit operator bool() const
+		{
+			return true;
+		}
+		constant end() const
+		{
+			return constant{};
+		}
+		value_type operator*() const
+		{
+			return t;
+		}
+		reference operator*()
+		{
+			return t;
+		}
+		constant& operator++()
+		{
+			return *this;
+		}
+	};
+
+#pragma region iota
+
+	// [b, b + 1, ..., e)
+	template<class T>
+	class iota {
+		T b, e;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
+		using value_type = std::remove_cv_t<T>;
+		using reference = T&;
+
+		iota(T b = 0, T e = std::numeric_limits<T>::max())
+			: b(b), e(e)
+		{ }
+		auto operator<=>(const iota&) const = default;
+		explicit operator bool() const
+		{
+			return b < e;
+		}
+		auto end() const
+		{
+			return iota(e, e);
+		}
+		value_type operator*() const
+		{
+			return b;
+		}
+		iota& operator++()
+		{
+			if (b < e) {
+				++b;
+			}
+
+			return *this;
+		}
+	};
+
+#ifdef _DEBUG
+
+	inline bool test_equal()
+	{
+		{
+			assert(equal(iota(0, 3), iota(0, 3)));
+			assert(!equal(iota(0, 2), iota(0, 3)));
+		}
+
+		return true;
+	}
+
+	inline bool test_compare()
+	{
+		{
+			assert(compare(iota(0, 3), iota(0, 3)) == 0);
+			assert(compare(iota(0, 2), iota(0, 3)) < 0);
+			assert(compare(iota(0, 3), iota(0, 2)) > 0);
+		}
+		{
+			assert(compare(iota(0, 3), iota<float>(0, 3)) == 0);
+			assert(compare(iota<double>(0, 2), iota(0, 3)) < 0);
+			assert(compare(iota<float>(0, 3), iota<double>(0, 2)) > 0);
+		}
+
+		return true;
+	}
+
+	template<class T>
+	inline bool test_iota()
+	{
+		{ // ctors, <=>
+			iota<T> i;
+			assert(i);
+			auto i2(i);
+			assert(i2);
+			assert(i2 == i);
+			i = i2;
+			assert(i);
+			assert(!(i != i2));
+			assert(i <= i2);
+			assert(!(i < i2));
+			assert(i2 >= i);
+			assert(!(i2 > i));
+		}
+		{
+			iota<T> i(1);
+			assert(i);
+			assert(*i == 1);
+			++i;
+			assert(i);
+			assert(*i == 2);
+		}
+		{
+			iota<T> i(0, 3);
+			assert(i);
+			assert(*i == 0);
+			++i;
+			assert(i);
+			assert(*i == 1);
+			++i;
+			assert(i);
+			assert(*i == 2);
+			++i;
+			assert(!i);
+		}
+		{
+			T t(0);
+			for (auto i : iota<T>(0, 3)) {
+				assert(i == t);
+				++t;
+			}
+		}
+		{
+			iota i(0, 3);
+			auto b = begin(i);
+			assert(b);
+			//assert(equal(i, interval(begin(i), end(i))));
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion iota
+
+#pragma region array
+
+	// create an iterable from a random access array
+	// nullptr gives 'empty' iterator
+	template<class T>
+	class array {
+	protected:
+		size_t n;
+		T* a;
+	public:
+		using iterator_concept = std::contiguous_iterator_tag;
+		using iterator_category = std::bidirectional_iterator_tag;;
+		using difference_type = ptrdiff_t;
+		using value_type = std::remove_cv_t<T>;
+		using reference = T&;
+
+		array()
+			: n(0), a(nullptr)
+		{ }
+		array(size_t n, T* a)
+			: n(n), a(a)
+		{ }
+		template<size_t N>
+		array(T(&a)[N])
+			: array(N, a)
+		{ }
+		array(const array&) = default;
+		array& operator=(const array&) = default;
+		~array()
+		{ }
+
+		auto operator<=>(const array&) const = default;
+
+		explicit operator bool() const
+		{
+			return n != 0;
+		}
+		array end() const
+		{
+			return array(0, a + n);
+		}
+
+		value_type operator*() const
+		{
+			return *a;
+		}
+		reference operator*()
+		{
+			return *a;
+		}
+
+		value_type operator[](difference_type n) const
+		{
+			return a[n];
+		}
+		reference operator[](difference_type n)
+		{
+			return a[n];
+		}
+
+		array& operator++()
+		{
+			if (n) {
+				--n;
+				++a;
+			}
+
+			return *this;
+		}
+		array operator++(int)
+		{
+			auto a_ = *this;
+
+			operator++();
+
+			return a_;
+		}
+		array& operator--()
+		{
+			if (n) {
+				++n;
+				--a;
+			}
+
+			return *this;
+		}
+		array operator--(int)
+		{
+			auto a_ = *this;
+
+			operator--();
+
+			return a_;
+		}
+
+		array& operator+=(difference_type n_)
+		{
+			n -= n_;
+			a += n_;
+			if (n < 0) { //!!! could be before beginning
+				n = 0;
+				a = nullptr;
+			}
+
+			return *this;
+		}
+		array& operator-=(difference_type n)
+		{
+			operator+=(-n);
+
+			return *this;
+		}
+	};
+
+} // namespace fms
+
+template<typename T>
+inline auto operator+(fms::array<T> a, typename fms::array<T>::difference_type n)
+{
+	return a += n;
+}
+template<typename T>
+inline auto operator+(typename fms::array<T>::difference_type n, fms::array<T> a)
+{
+	return a += n;
+}
+template<typename T>
+inline auto operator-(fms::array<T> a, typename fms::array<T>::difference_type n)
+{
+	return a -= n;
+}
+
+namespace fms {
+
+#ifdef _DEBUG
+#include <numeric>
+	template<class T>
+	inline bool test_array()
+	{
+		{
+			T t[] = { 1,2,3 };
+			array<T> a(t);
+			assert(a);
+			auto a2(a);
+			assert(a2);
+			assert(a2 == a);
+			a = a2;
+			assert(a);
+			assert(!(a != a2));
+			assert(a <= a2);
+			assert(!(a < a2));
+			assert(a >= a2);
+			assert(!(a > a2));
+		}
+		{
+			T t[] = { 1,2,3 };
+			array<T> a(t);
+			assert(*a == t[0]);
+
+			++a;
+			assert(a);
+			assert(*a == t[1]);
+
+			a += 1;
+			assert(*a == t[2]);
+			a -= 1;
+			a += 1;
+
+			a = a - 1;
+			assert(*a == t[1]);
+
+			a = a + 1;
+			assert(*a == t[2]);
+
+			assert(*a-- == t[2]);
+			assert(*a == t[1]);
+
+			assert(*a++ == t[1]);
+			assert(*a == t[2]);
+		}
+		{
+			T t[] = { 1,2,3 };
+			array<T> a(t);
+			assert(equal(a, iota<T>(1, 4)));
+			assert(compare(a, iota<T>(1, 4)) == 0);
+			assert(equal(a, iota(1, 4)));
+			assert(compare(a, iota(1, 4)) == 0);
+		}
+		{
+			T t[] = { 1,2,3 };
+			array<T> a(t);
+			assert(6 == std::accumulate(begin(a), end(a), T(0)));
+		}
+		{
+			array<T> e; // empty
+			assert(!e);
+			assert(e == begin(e));
+			assert(e == end(e));
+			assert(equal(e, e));
+			assert(compare(e, e) == 0);
+		}
+
+		return true;
+	}
+
+#endif // _DEBUG
+
+#pragma endregion array
 
 }
 
+#if 0
 #include "fms_function.h"
 #include "fms_numeric.h"
 
@@ -225,176 +556,6 @@ namespace fms {
 
 #pragma endregion null
 
-#pragma region pointer
-
-	// create an iterable from a random access pointer
-	// `explicit operator bool() const` is always dangerously true
-	// nullptr gives 'empty' class
-	template<class T>
-	class pointer {
-	protected:
-		T* p;
-	public:
-		using iterator_concept = typename std::iterator_traits<T*>::iterator_concept;
-		using iterator_category = typename std::iterator_traits<T*>::iterator_category;
-		using difference_type = typename std::iterator_traits<T*>::difference_type;
-		using reference = T&;
-		using value_type = T;
-
-		pointer(T* p = nullptr)
-			: p(p)
-		{ }
-		pointer(const pointer&) = default;
-		pointer& operator=(const pointer&) = default;
-		~pointer()
-		{ }
-
-		auto operator<=>(const pointer&) const = default;
-
-		explicit operator bool() const
-		{
-			return p ? true : false; // does not check if valid
-		}
-		pointer end() const
-		{
-			return pointer(nullptr);
-		}
-
-		value_type operator*() const
-		{
-			return *p;
-		}
-		reference operator*()
-		{
-			return *p;
-		}
-
-		value_type operator[](difference_type n) const
-		{
-			return p[n];
-		}
-		reference operator[](difference_type n)
-		{
-			return p[n];
-		}
-		
-		pointer& operator++()
-		{
-			++p;
-
-			return *this;
-		}
-		pointer operator++(int)
-		{
-			auto p_ = *this;
-
-			++p;
-
-			return p_;
-		}
-		pointer& operator--()
-		{
-			--p;
-
-			return *this;
-		}
-		pointer operator--(int)
-		{
-			auto p_ = *this;
-
-			--p;
-
-			return p_;
-		}
-
-		pointer& operator+=(difference_type n)
-		{
-			p += n;
-
-			return *this;
-		}
-		pointer& operator-=(difference_type n)
-		{
-			p -= n;
-
-			return *this;
-		}
-	};
-
-} // namespace fms
-
-template<typename T>
-inline auto operator+(fms::pointer<T> p, typename fms::pointer<T>::difference_type n)
-{
-	return p += n;
-}
-template<typename T>
-inline auto operator+(typename fms::pointer<T>::difference_type n, fms::pointer<T> p)
-{
-	return p += n;
-}
-template<typename T>
-inline auto operator-(fms::pointer<T> p, typename fms::pointer<T>::difference_type n)
-{
-	return p -= n;
-}
-
-namespace fms {
-
-	#ifdef _DEBUG
-
-	inline bool test_pointer()
-	{
-		{
-			int i[] = { 1,2,3 };
-			pointer<int> p(i);
-			assert(p);
-			auto p2(p);
-			assert(p2);
-			assert(p2 == p);
-			p = p2;
-			assert(p);
-			assert(!(p != p2));
-
-			assert(*p == i[0]);
-			
-			++p;
-			assert(p);
-			assert(*p == i[1]);
-
-			p += 1;
-			assert(*p == i[2]);
-			p -= 1;
-			p += 1;
-
-			p = p - 1;
-			assert(*p == i[1]);
-			
-			p = p + 1;
-			assert(*p == i[2]);
-
-			assert(*p-- == i[2]);
-			assert(*p == i[1]);
-
-			assert(*p++ == i[1]);
-			assert(*p == i[2]);
-		}
-		{
-			pointer<int> e; // empty
-			assert(!e);
-			assert(e == begin(e));
-			assert(e == end(e));
-			assert(0 == length(e));
-			assert(equal(e, e));
-			assert(compare(e, e) == 0);
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-#pragma endregion pointer
 
 #pragma region array
 
@@ -514,11 +675,6 @@ namespace fms {
 				assert(ai == a0);
 				++a0;
 			}
-		}
-		{
-			T a_[] = { 1,2,3 };
-			array<T> a(a_);
-			assert(6 == std::accumulate(begin(a), end(a), 0));
 		}
 		{
 			T a_[] = { 1,2,3 };
@@ -1955,3 +2111,4 @@ inline auto operator,(const I& i, const J& j)
 {
 	return fms::join(i, j);
 }
+#endif // 0

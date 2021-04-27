@@ -1,6 +1,5 @@
 // fms_tuple.h - iterable tuples
 // ??? zip
-#pragma once
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -24,6 +23,39 @@ namespace fms {
 		col(Is&&... is)
 			: c(capture(is...))
 		{ }
+	};
+
+
+	template<iterable I, iterable J>
+	class mow {
+		I i;
+		J j;
+	public:
+		using iterator_concept = std::forward_iterator_tag;
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = std::common_type_t<typename I::value_type, typename J::value_type>;
+
+		mow(const I& i, const J& j)
+			: i(i), j(j)
+		{ }
+		explicit operator bool() const
+		{
+			return i and j;
+		}
+		auto end() const
+		{
+			return mow(i.end(), j.end());
+		}
+		value_type operator*() const
+		{
+			return i ? *i : *j;
+		}
+		mow& operator++()
+		{
+			i ? ++i : ++j;
+
+			return *this;
+		}
 	};
 
 }
