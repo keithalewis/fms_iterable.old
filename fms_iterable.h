@@ -320,13 +320,7 @@ namespace fms {
 				++t;
 			}
 		}
-		{
-			iota i(0, 3);
-			auto b = begin(i);
-			assert(b);
-			//assert(equal(i, interval(begin(i), end(i))));
-		}
-
+		
 		return true;
 	}
 
