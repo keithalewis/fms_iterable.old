@@ -139,6 +139,9 @@ namespace fms::iterable {
 				assert(j++ == *i++);
 			}
 			assert(4 == j);
+			--i; // for loop gets its own begin, end
+			assert(3 == *i);
+			//i -= 2; // not available for list
 		}
 
 		return true;
