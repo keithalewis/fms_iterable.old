@@ -6,6 +6,7 @@
 using namespace fms::iterable;
 
 bool test_iterable_container_ = test_iterable_container();
+bool test_upto_ = test_upto();
 
 #if 0
 bool test_interval_i = test_interval<int>();

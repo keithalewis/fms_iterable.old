@@ -30,8 +30,7 @@ namespace fms::iterable {
 		typename I::value_type;
 		typename I::pointer;
 		typename I::reference;
-
-		{ !!i } -> std::same_as<bool>; // operator bool()
+		{ i.operator bool() } -> std::same_as<bool>;
 		{  *i } -> std::convertible_to<typename I::value_type>; // remove_cv???
 		{ ++i } -> std::same_as<I&>;
 		{ i++ } -> std::same_as<I>;
@@ -54,12 +53,21 @@ namespace fms::iterable {
 	}
 
 	// convert container begin, end to iterable
-	template<class C>
-	class container : public C::iterator {
+	template<class C, class I = C::iterator>
+	class container : public I {
 		C::iterator e;
 	public:
+		using iterator_category = I::iterator_category;
+		using difference_type = typename I::difference_type;
+		using value_type = typename I::value_type;
+		using pointer = typename I::pointer;
+		using reference = typename I::reference;
+
 		container(C& c)
-			: C::iterator(c.begin()), e(c.end())
+			: I(c.begin()), e(c.end())
+		{ }
+		container(const I& b, const I& e)
+			: I(b), e(e)
 		{ }
 		container(const container&) = default;
 		container& operator=(const container&) = default;
@@ -71,28 +79,53 @@ namespace fms::iterable {
 			return e == i.e and C::iterator::operator==(i);
 		}
 
-		C::iterator begin() const
+		container begin() const
 		{
 			return *this;
 		}
-		C::iterator end() const
+		container end() const
 		{
-			return e;
+			return container(e,e);
 		}
 
 		explicit operator bool() const
 		{
-			return !C::iterator::operator==(e);
+			return !I::operator==(e);
+		}
+
+		container& operator++()
+		{
+			I::operator++();
+
+			return *this;
+		}
+		container operator++(int)
+		{
+			container c_(*this);
+
+			I::operator++();
+
+			return c_;
 		}
 	};
 #ifdef _DEBUG
+	template<input_iterable I>
+	inline auto first(I i)
+	{
+		return *i;
+	}
 	inline bool test_iterable_container()
 	{
 		{
 			std::array<int, 3> a = { 1,2,3 };
-			container i(a);
+			iterable::container i(a);
+			auto i0 = first(i);
+		}
+		{
+			std::array<int, 3> a = { 1,2,3 };
+			iterable::container i(a);
 			assert(i);
-			container i2(i);
+			iterable::container i2(i);
 			assert(i2);
 			assert(i == i2);
 			assert(!(i != i2));
@@ -108,12 +141,15 @@ namespace fms::iterable {
 			assert(3 == *i);
 			assert(3 == *i--);
 			assert(2 == *i);
+			// i isa array
 			i += 1;
 			assert(3 == *i);
+			i -= 2;
+			assert(1 == *i);
 		}
 		{
 			std::array<int, 3> a = { 1,2,3 };
-			container i(a);
+			iterable::container i(a);
 			int j = 1;
 			for (const int& k : i) {
 				assert(j++ == *i++);
@@ -122,7 +158,7 @@ namespace fms::iterable {
 		}
 		{
 			std::array<int, 3> a = { 1,2,3 };
-			container i(a);
+			iterable::container i(a);
 			for (int& k : i) {
 				*i = k + 1;
 			}
@@ -133,7 +169,7 @@ namespace fms::iterable {
 		}
 		{
 			std::list<int> a = { 1,2,3 };
-			container i(a);
+			iterable::container i(a);
 			int j = 1;
 			for (const int& k : i) {
 				assert(j++ == *i++);
@@ -155,10 +191,9 @@ namespace fms::iterable {
 	template<input_iterable I, input_iterable J>
 	inline constexpr bool equal(I i, J j)
 	{
-		while (i and j) {
+		while (i and j)
 			if (*i++ != *j++)
 				return false;
-		}
 
 		return !i and !j;
 	}
@@ -170,6 +205,33 @@ namespace fms::iterable {
 		return !i or p(i) ? i : upto(++i, p);
 	}
 
+	// return end or first false item
+	template<input_iterable I>
+	inline constexpr I all(I i)
+	{
+		return upto(i, [](I i) { return !*i; });
+	}
+
+	// return end or first true item
+	template<input_iterable I>
+	inline constexpr I any(I i)
+	{
+		return upto(i, [](I i) { return *i; });
+	}
+#ifdef _DEBUG
+	inline bool test_upto()
+	{
+		{
+			std::array<int, 3> v = { 1,2,3 };
+			iterable::container i(v);
+			auto u = upto(i, [](auto j) { return 2 == *j; });
+			assert(*u == 2);
+		}
+
+		return true;
+	}
+#endif // _DEBUG
+
 	// return end or last item before end
 	template<input_iterable I>
 	inline constexpr I back(I i)
@@ -180,19 +242,6 @@ namespace fms::iterable {
 		}
 
 		return i;
-	}
-
-	// return end or first false item
-	template<input_iterable I>
-	inline constexpr I all(I i)
-	{
-		return upto(i, [](I i) { return !*i; });
-	}
-	// return end or first true item
-	template<input_iterable I>
-	inline constexpr I any(I i)
-	{
-		return upto(i, [](I i) { return *i; });
 	}
 
 	// filter on predicate p
