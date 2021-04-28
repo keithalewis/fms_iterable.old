@@ -3,8 +3,11 @@
 #include <iostream>
 #include "fms_iterable.h"
 
-using namespace fms;
+using namespace fms::iterable;
 
+bool test_iterable_container_ = test_iterable_container();
+
+#if 0
 bool test_interval_i = test_interval<int>();
 bool test_interval_f = test_interval<float>();
 bool test_interval_d = test_interval<double>();
@@ -119,6 +122,7 @@ inline constexpr void incr(I& i, Is&... is)
 	incr(is...);
 }
 */
+#endif // 0
 int main()
 {
 	/*
