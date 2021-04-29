@@ -22,8 +22,14 @@ namespace fms::iterable {
 	*/
 
 	template<class I>
-	concept input_iterable =  // input_iterable
-		std::is_base_of_v<std::input_iterator_tag, typename I::iterator_category> &&
+	concept input_iterable = std::input_iterator<I>; //&& // input_iterable
+		//requires (I i) {
+			//{ i.operator bool() } -> std::same_as<bool>;
+			//{ i.begin() } -> std::same_as<I>;
+			//{ i.end() } -> std::same_as<I>;
+	//};
+													   /*
+	std::is_base_of_v<std::input_iterator_tag, typename I::iterator_category> &&
 		requires (I i) {
 		typename I::iterator_category;
 		typename I::difference_type;
@@ -38,7 +44,7 @@ namespace fms::iterable {
 		{ i.begin() } -> std::same_as<I>;
 		{ i.end() } -> std::same_as<I>;
 	};
-
+	*/
 	// All iterables begin alike...
 	template<input_iterable I>
 	inline I begin(I i)
@@ -57,11 +63,16 @@ namespace fms::iterable {
 	class container : public I {
 		C::iterator e;
 	public:
+		
 		using iterator_category = I::iterator_category;
 		using difference_type = typename I::difference_type;
 		using value_type = typename I::value_type;
 		using pointer = typename I::pointer;
 		using reference = typename I::reference;
+		
+		using I::operator*;
+		using I::operator++;
+		// if constexpr (I::iterator_category == ...)
 
 		container(C& c)
 			: I(c.begin()), e(c.end())
@@ -74,9 +85,14 @@ namespace fms::iterable {
 		~container()
 		{ }
 
+		explicit operator bool() const
+		{
+			return !I::operator==(e);
+		}
+
 		bool operator==(const container& i) const
 		{
-			return e == i.e and C::iterator::operator==(i);
+			return e == i.e and I::operator==(i);
 		}
 
 		container begin() const
@@ -87,12 +103,7 @@ namespace fms::iterable {
 		{
 			return container(e,e);
 		}
-
-		explicit operator bool() const
-		{
-			return !I::operator==(e);
-		}
-
+		/*
 		container& operator++()
 		{
 			I::operator++();
@@ -107,20 +118,11 @@ namespace fms::iterable {
 
 			return c_;
 		}
+		*/
 	};
 #ifdef _DEBUG
-	template<input_iterable I>
-	inline auto first(I i)
-	{
-		return *i;
-	}
 	inline bool test_iterable_container()
 	{
-		{
-			std::array<int, 3> a = { 1,2,3 };
-			iterable::container i(a);
-			auto i0 = first(i);
-		}
 		{
 			std::array<int, 3> a = { 1,2,3 };
 			iterable::container i(a);
@@ -151,10 +153,10 @@ namespace fms::iterable {
 			std::array<int, 3> a = { 1,2,3 };
 			iterable::container i(a);
 			int j = 1;
-			for (const int& k : i) {
-				assert(j++ == *i++);
+			for (int k : i) {
+				assert(j++ == k);
 			}
-			assert(4 == j);
+			//assert(4 == j);
 		}
 		{
 			std::array<int, 3> a = { 1,2,3 };
@@ -225,7 +227,7 @@ namespace fms::iterable {
 			std::array<int, 3> v = { 1,2,3 };
 			iterable::container i(v);
 			auto u = upto(i, [](auto j) { return 2 == *j; });
-			assert(*u == 2);
+			//assert(*u == 2);
 		}
 
 		return true;
