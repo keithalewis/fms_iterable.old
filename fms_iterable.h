@@ -21,16 +21,11 @@ namespace fms::iterable {
 	concept ptr_iterable = std::input_iterator<T*>;
 	*/
 
+	// std::input_iterator drags in ranges requirements
 	template<class I>
-	concept input_iterable = std::input_iterator<I>; //&& // input_iterable
-		//requires (I i) {
-			//{ i.operator bool() } -> std::same_as<bool>;
-			//{ i.begin() } -> std::same_as<I>;
-			//{ i.end() } -> std::same_as<I>;
-	//};
-													   /*
-	std::is_base_of_v<std::input_iterator_tag, typename I::iterator_category> &&
-		requires (I i) {
+	concept input_iterable =
+		std::is_base_of_v<std::input_iterator_tag, typename I::iterator_category>
+		&& requires (I i) {
 		typename I::iterator_category;
 		typename I::difference_type;
 		typename I::value_type;
@@ -44,7 +39,7 @@ namespace fms::iterable {
 		{ i.begin() } -> std::same_as<I>;
 		{ i.end() } -> std::same_as<I>;
 	};
-	*/
+
 	// All iterables begin alike...
 	template<input_iterable I>
 	inline I begin(I i)
@@ -58,134 +53,101 @@ namespace fms::iterable {
 		return i.end();
 	}
 
-	// convert container begin, end to iterable
-	template<class C, class I = C::iterator>
-	class container : public I {
-		C::iterator e;
-	public:
-		
-		using iterator_category = I::iterator_category;
-		using difference_type = typename I::difference_type;
-		using value_type = typename I::value_type;
-		using pointer = typename I::pointer;
-		using reference = typename I::reference;
-		
-		using I::operator*;
-		using I::operator++;
-		// if constexpr (I::iterator_category == ...)
+#pragma region iota
 
-		container(C& c)
-			: I(c.begin()), e(c.end())
+	// [b, b + 1, ..., e)
+	template<class T>
+	class iota {
+		T b, e;
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = ptrdiff_t;
+		using value_type = T;
+		using pointer = T*;
+		using reference = T&;
+
+		iota(T b = 0, T e = std::numeric_limits<T>::max())
+			: b(b), e(e)
 		{ }
-		container(const I& b, const I& e)
-			: I(b), e(e)
+		iota(const iota&) = default;
+		iota& operator=(const iota&) = default;
+		~iota()
 		{ }
-		container(const container&) = default;
-		container& operator=(const container&) = default;
-		~container()
-		{ }
+
+		bool operator==(const iota& i) const
+		{
+			return b == i.b and e == i.e;
+		}
 
 		explicit operator bool() const
 		{
-			return !I::operator==(e);
+			return b < e;
 		}
 
-		bool operator==(const container& i) const
+		iota begin() const
 		{
-			return e == i.e and I::operator==(i);
+			return b;
+		}
+		iota end() const
+		{
+			return iota(e, e);
 		}
 
-		container begin() const
+		value_type operator*() const
 		{
+			return b;
+		}
+		reference operator*()
+		{
+			return b;
+		}
+
+		iota& operator++()
+		{
+			if (b < e) {
+				++b;
+			}
+
 			return *this;
 		}
-		container end() const
+		iota operator++(int)
 		{
-			return container(e,e);
-		}
-		/*
-		container& operator++()
-		{
-			I::operator++();
+			iota i_(*this);
 
-			return *this;
-		}
-		container operator++(int)
-		{
-			container c_(*this);
+			operator++();
 
-			I::operator++();
-
-			return c_;
+			return i_;
 		}
-		*/
-	};
 #ifdef _DEBUG
-	inline bool test_iterable_container()
-	{
+		static bool test()
 		{
-			std::array<int, 3> a = { 1,2,3 };
-			iterable::container i(a);
-			assert(i);
-			iterable::container i2(i);
-			assert(i2);
-			assert(i == i2);
-			assert(!(i != i2));
-			i = i2;
-			assert(i and i2 and i2 == i and !(i != i2));
+			{
+				iota i;
+				assert(i);
+				iota i2(i);
+				assert(i2);
+				assert(i == i2);
+				assert(!(i2 != i));
+				i = i2;
+				assert(i == i2);
 
-			assert(1 == *i++);
-			assert(2 == *i);
-			assert(3 == *++i);
-			++i;
-			assert(!i);
-			--i;
-			assert(3 == *i);
-			assert(3 == *i--);
-			assert(2 == *i);
-			// i isa array
-			i += 1;
-			assert(3 == *i);
-			i -= 2;
-			assert(1 == *i);
-		}
-		{
-			std::array<int, 3> a = { 1,2,3 };
-			iterable::container i(a);
-			int j = 1;
-			for (int k : i) {
-				assert(j++ == k);
-			}
-			//assert(4 == j);
-		}
-		{
-			std::array<int, 3> a = { 1,2,3 };
-			iterable::container i(a);
-			for (int& k : i) {
-				*i = k + 1;
-			}
-			int j = 2;
-			for (int k : i) {
-				k = j++;
-			}
-		}
-		{
-			std::list<int> a = { 1,2,3 };
-			iterable::container i(a);
-			int j = 1;
-			for (const int& k : i) {
-				assert(j++ == *i++);
-			}
-			assert(4 == j);
-			--i; // for loop gets its own begin, end
-			assert(3 == *i);
-			//i -= 2; // not available for list
-		}
+				assert(0 == *i);
+				++i;
+				assert(1 == *i);
+				i++;
+				assert(2 == *i);
+				assert(3 == *++i);
+				assert(3 == *i++);
 
-		return true;
-	}
+				*i = 5;
+				assert(*i == 5);
+				assert(6 == *++i);
+			}
+
+			return true;
+		}
 #endif // _DEBUG
-	//??? const_container
+	};
 
 	// iterables are lightweight and often passed by value
 
@@ -207,6 +169,25 @@ namespace fms::iterable {
 		return !i or p(i) ? i : upto(++i, p);
 	}
 
+#ifdef _DEBUG
+	template<class T>
+	inline bool test_upto()
+	{
+		{
+			iota<T> i;
+			auto u = upto(i, [](auto j) { return 2 == *j; });
+			assert(*u == 2);
+		}
+		{
+			iota<T> i(0, 3);
+			auto u = upto(i, [](auto j) { return 4 == *j; });
+			assert(u == u.end());
+		}
+
+		return true;
+	}
+#endif // _DEBUG
+
 	// return end or first false item
 	template<input_iterable I>
 	inline constexpr I all(I i)
@@ -220,28 +201,14 @@ namespace fms::iterable {
 	{
 		return upto(i, [](I i) { return *i; });
 	}
-#ifdef _DEBUG
-	inline bool test_upto()
-	{
-		{
-			std::array<int, 3> v = { 1,2,3 };
-			iterable::container i(v);
-			auto u = upto(i, [](auto j) { return 2 == *j; });
-			//assert(*u == 2);
-		}
-
-		return true;
-	}
-#endif // _DEBUG
 
 	// return end or last item before end
 	template<input_iterable I>
 	inline constexpr I back(I i)
 	{
-		while (I _i = i++) {
+		while (I _i = i++)
 			if (!i)
 				return _i;
-		}
 
 		return i;
 	}
