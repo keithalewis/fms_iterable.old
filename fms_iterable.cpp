@@ -11,15 +11,13 @@ bool test_span_d = span<const double*>::test();
 
 bool test_constant_i = constant<int>::test();
 
-bool test_iota_i = test_iota<int>();
-bool test_iota_f = test_iota<float>();
-bool test_iota_d = test_iota<double>();
+bool test_iota_i = iota<int>::test();
+bool test_iota_f = iota<float>::test();
+bool test_iota_d = iota<double>::test();
 
-bool test_equal_ = test_equal();
-bool test_compare_ = test_compare();
-bool test_array_i = test_array<int>();
-bool test_array_f = test_array<float>();
-bool test_array_d = test_array<double>();
+bool test_array_i = array<int>::test();
+bool test_array_f = array<float>::test();
+bool test_array_d = array<double>::test();
 
 /*
 bool test_pointer_ = test_pointer();

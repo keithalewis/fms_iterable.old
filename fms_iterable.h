@@ -44,19 +44,6 @@ namespace fms {
 		return i.end();
 	}
 
-	// all values are equal
-	template<iterable I, iterable J>
-	constexpr bool equal(I i, J j)
-	{
-		for (; i and j; ++i, ++j) {
-			if (*i != *j) {
-				return false;
-			}
-		}
-
-		return !i and !j;
-	}
-
 	// three way lexicographical compare
 	template<iterable I, iterable J>
 	constexpr auto compare(I i, J j)
@@ -72,8 +59,12 @@ namespace fms {
 
 		return T(!!i) <=> T(!!j);
 	}
-
-#pragma region span
+	// all values are equal
+	template<iterable I, iterable J>
+	constexpr bool equal(I i, J j)
+	{
+		return compare(i, j) == 0;
+	}
 
 	// STL range [b, e)
 	template<class I>
@@ -97,15 +88,15 @@ namespace fms {
 		constexpr span& operator=(const span&) = default;
 		constexpr ~span() = default;
 
-		constexpr auto operator<=>(const span&) const = default;
+		constexpr bool operator==(const span&) const = default;
+		constexpr auto end() const
+		{
+			return span(e, e);
+		}
 
 		constexpr explicit operator bool() const
 		{
 			return b != e;
-		}
-		constexpr auto end() const
-		{
-			return span(e, e);
 		}
 		constexpr value_type operator*() const
 		{
@@ -125,7 +116,7 @@ namespace fms {
 		{
 			using T = value_type;
 			static constexpr T t[] = { 0, 1, 2 };
-			{ // ctors, <=>
+			{
 				constexpr auto i = span(t, t + 3);
 				static_assert(i);
 				constexpr auto i2(i);
@@ -134,10 +125,6 @@ namespace fms {
 				constexpr auto i3 = i2;
 				static_assert(i3);
 				static_assert(!(i3 != i2));
-				static_assert(i3 <= i2);
-				static_assert(!(i3 < i2));
-				static_assert(i2 >= i3);
-				static_assert(!(i2 > i3));
 			}
 			{
 				auto i = span(t, t + 3);
@@ -176,8 +163,6 @@ namespace fms {
 
 #endif // _DEBUG
 	};
-
-#pragma endregion span
 
 	template<class T>
 	class constant {
@@ -251,8 +236,6 @@ namespace fms {
 #endif // _DEBUG
 	};
 
-#pragma region iota
-
 	// [b, b + 1, ..., e)
 	template<class T>
 	class iota {
@@ -264,23 +247,28 @@ namespace fms {
 		using value_type = std::remove_cv_t<T>;
 		using reference = T&;
 
-		iota(T b = 0, T e = std::numeric_limits<T>::max())
+		constexpr iota(T b = 0, T e = std::numeric_limits<T>::max())
 			: b(b), e(e)
 		{ }
-		auto operator<=>(const iota&) const = default;
-		explicit operator bool() const
-		{
-			return b < e;
-		}
+		constexpr iota(const iota&) = default;
+		constexpr iota& operator=(const iota&) = default;
+		constexpr ~iota() = default;
+
+		constexpr bool operator==(const iota&) const = default;	
 		auto end() const
 		{
 			return iota(e, e);
 		}
-		value_type operator*() const
+
+		constexpr explicit operator bool() const
+		{
+			return b < e;
+		}
+		constexpr value_type operator*() const
 		{
 			return b;
 		}
-		iota& operator++()
+		constexpr iota& operator++()
 		{
 			if (b < e) {
 				++b;
@@ -288,90 +276,69 @@ namespace fms {
 
 			return *this;
 		}
-	};
-
 #ifdef _DEBUG
 
-	inline bool test_equal()
-	{
+		static int test()
 		{
-			assert(equal(iota(0, 3), iota(0, 3)));
-			assert(!equal(iota(0, 2), iota(0, 3)));
-		}
-
-		return true;
-	}
-
-	inline bool test_compare()
-	{
-		{
-			assert(compare(iota(0, 3), iota(0, 3)) == 0);
-			assert(compare(iota(0, 2), iota(0, 3)) < 0);
-			assert(compare(iota(0, 3), iota(0, 2)) > 0);
-		}
-		{
-			assert(compare(iota(0, 3), iota<float>(0, 3)) == 0);
-			assert(compare(iota<double>(0, 2), iota(0, 3)) < 0);
-			assert(compare(iota<float>(0, 3), iota<double>(0, 2)) > 0);
-		}
-
-		return true;
-	}
-
-	template<class T>
-	inline bool test_iota()
-	{
-		{ // ctors, <=>
-			iota<T> i;
-			assert(i);
-			auto i2(i);
-			assert(i2);
-			assert(i2 == i);
-			i = i2;
-			assert(i);
-			assert(!(i != i2));
-			assert(i <= i2);
-			assert(!(i < i2));
-			assert(i2 >= i);
-			assert(!(i2 > i));
-		}
-		{
-			iota<T> i(1);
-			assert(i);
-			assert(*i == 1);
-			++i;
-			assert(i);
-			assert(*i == 2);
-		}
-		{
-			iota<T> i(0, 3);
-			assert(i);
-			assert(*i == 0);
-			++i;
-			assert(i);
-			assert(*i == 1);
-			++i;
-			assert(i);
-			assert(*i == 2);
-			++i;
-			assert(!i);
-		}
-		{
-			T t(0);
-			for (auto i : iota<T>(0, 3)) {
-				assert(i == t);
-				++t;
+			{
+				assert(equal(iota(0, 3), iota(0, 3)));
+				assert(!equal(iota(0, 2), iota(0, 3)));
 			}
+			{
+				assert(compare(iota(0, 3), iota(0, 3)) == 0);
+				assert(compare(iota(0, 2), iota(0, 3)) < 0);
+				assert(compare(iota(0, 3), iota(0, 2)) > 0);
+			}
+			{
+				assert(compare(iota(0, 3), iota<float>(0, 3)) == 0);
+				assert(compare(iota<double>(0, 2), iota(0, 3)) < 0);
+				assert(compare(iota<float>(0, 3), iota<double>(0, 2)) > 0);
+			}
+			{ // ctors, <=>
+				constexpr auto i = iota<T>{};
+				static_assert(i);
+				constexpr auto i2(i);
+				static_assert(i2);
+				static_assert(i2 == i);
+				constexpr auto i3 = i2;
+				assert(i3);
+				assert(!(i3 != i2));
+			}
+			{
+				iota<T> i(1);
+				assert(i);
+				assert(*i == 1);
+				++i;
+				assert(i);
+				assert(*i == 2);
+			}
+			{
+				iota<T> i(0, 3);
+				assert(i);
+				assert(*i == 0);
+				++i;
+				assert(i);
+				assert(*i == 1);
+				++i;
+				assert(i);
+				assert(*i == 2);
+				++i;
+				assert(!i);
+			}
+			{
+				T t(0);
+				for (auto i : iota<T>(0, 3)) {
+					assert(i == t);
+					++t;
+				}
+				assert(t == 3);
+			}
+
+			return true;
 		}
-		
-		return true;
-	}
 
 #endif // _DEBUG
-
-#pragma endregion iota
-
-#pragma region array
+	};
 
 	// create an iterable from a random access array
 	// nullptr gives 'empty' iterator
@@ -387,51 +354,47 @@ namespace fms {
 		using value_type = std::remove_cv_t<T>;
 		using reference = T&;
 
-		array()
-			: n(0), a(nullptr)
-		{ }
-		array(size_t n, T* a)
+		constexpr array(size_t n = 0, T* a = nullptr)
 			: n(n), a(a)
 		{ }
 		template<size_t N>
-		array(T(&a)[N])
+		constexpr array(T(&a)[N])
 			: array(N, a)
 		{ }
-		array(const array&) = default;
-		array& operator=(const array&) = default;
-		~array()
-		{ }
+		constexpr array(const array&) = default;
+		constexpr array& operator=(const array&) = default;
+		constexpr ~array() = default;
 
-		auto operator<=>(const array&) const = default;
-
-		explicit operator bool() const
-		{
-			return n != 0;
-		}
-		array end() const
+		constexpr array end() const
 		{
 			return array(0, a + n);
 		}
+		constexpr bool operator==(const array&) const = default;
 
-		value_type operator*() const
+		constexpr explicit operator bool() const
+		{
+			return n != 0;
+		}
+
+		constexpr value_type operator*() const
 		{
 			return *a;
 		}
-		reference operator*()
+		constexpr reference operator*()
 		{
 			return *a;
 		}
 
-		value_type operator[](difference_type n) const
+		constexpr value_type operator[](difference_type n) const
 		{
 			return a[n];
 		}
-		reference operator[](difference_type n)
+		constexpr reference operator[](difference_type n)
 		{
 			return a[n];
 		}
 
-		array& operator++()
+		constexpr array& operator++()
 		{
 			if (n) {
 				--n;
@@ -440,7 +403,7 @@ namespace fms {
 
 			return *this;
 		}
-		array operator++(int)
+		constexpr array operator++(int)
 		{
 			auto a_ = *this;
 
@@ -448,7 +411,7 @@ namespace fms {
 
 			return a_;
 		}
-		array& operator--()
+		constexpr array& operator--()
 		{
 			if (n) {
 				++n;
@@ -457,7 +420,7 @@ namespace fms {
 
 			return *this;
 		}
-		array operator--(int)
+		constexpr array operator--(int)
 		{
 			auto a_ = *this;
 
@@ -466,121 +429,65 @@ namespace fms {
 			return a_;
 		}
 
-		array& operator+=(difference_type n_)
+#ifdef _DEBUG
+#include <numeric>
+
+		static int test()
 		{
-			n -= n_;
-			a += n_;
-			if (n < 0) { //!!! could be before beginning
-				n = 0;
-				a = nullptr;
+			using fms::end;
+			{
+				T t[] = { 1,2,3 };
+				array<T> a(t);
+				assert(a);
+				auto a2(a);
+				assert(a2);
+				assert(a2 == a);
+				a = a2;
+				assert(a);
+				assert(!(a != a2));
+			}
+			{
+				T t[] = { 1,2,3 };
+				array<T> a(t);
+				assert(*a == t[0]);
+
+				++a;
+				assert(a);
+				assert(*a == t[1]);
+
+				assert(*a-- == t[1]);
+				assert(*a == t[0]);
+
+				assert(*a++ == t[0]);
+				assert(*a == t[1]);
+			}
+			{
+				T t[] = { 1,2,3 };
+				array<T> a(t);
+				assert(equal(a, iota(1, 4)));
+				assert(compare(a, iota(1, 4)) == 0);
+			}
+			{
+				T t[] = { 1,2,3 };
+				array<T> a(t);
+				assert(6 == std::accumulate(begin(a), end(a), T(0)));
+			}
+			{
+				array<T> e; // empty
+				assert(!e);
+				assert(e == begin(e));
+				assert(e == end(e));
+				assert(equal(e, e));
+				assert(compare(e, e) == 0);
 			}
 
-			return *this;
+			return true;
 		}
-		array& operator-=(difference_type n)
-		{
-			operator+=(-n);
 
-			return *this;
-		}
+#endif // _DEBUG
 	};
 
 } // namespace fms
-
-template<typename T>
-inline auto operator+(fms::array<T> a, typename fms::array<T>::difference_type n)
-{
-	return a += n;
-}
-template<typename T>
-inline auto operator+(typename fms::array<T>::difference_type n, fms::array<T> a)
-{
-	return a += n;
-}
-template<typename T>
-inline auto operator-(fms::array<T> a, typename fms::array<T>::difference_type n)
-{
-	return a -= n;
-}
-
-namespace fms {
-
-#ifdef _DEBUG
-#include <numeric>
-	template<class T>
-	inline bool test_array()
-	{
-		{
-			T t[] = { 1,2,3 };
-			array<T> a(t);
-			assert(a);
-			auto a2(a);
-			assert(a2);
-			assert(a2 == a);
-			a = a2;
-			assert(a);
-			assert(!(a != a2));
-			assert(a <= a2);
-			assert(!(a < a2));
-			assert(a >= a2);
-			assert(!(a > a2));
-		}
-		{
-			T t[] = { 1,2,3 };
-			array<T> a(t);
-			assert(*a == t[0]);
-
-			++a;
-			assert(a);
-			assert(*a == t[1]);
-
-			a += 1;
-			assert(*a == t[2]);
-			a -= 1;
-			a += 1;
-
-			a = a - 1;
-			assert(*a == t[1]);
-
-			a = a + 1;
-			assert(*a == t[2]);
-
-			assert(*a-- == t[2]);
-			assert(*a == t[1]);
-
-			assert(*a++ == t[1]);
-			assert(*a == t[2]);
-		}
-		{
-			T t[] = { 1,2,3 };
-			array<T> a(t);
-			assert(equal(a, iota<T>(1, 4)));
-			assert(compare(a, iota<T>(1, 4)) == 0);
-			assert(equal(a, iota(1, 4)));
-			assert(compare(a, iota(1, 4)) == 0);
-		}
-		{
-			T t[] = { 1,2,3 };
-			array<T> a(t);
-			assert(6 == std::accumulate(begin(a), end(a), T(0)));
-		}
-		{
-			array<T> e; // empty
-			assert(!e);
-			assert(e == begin(e));
-			assert(e == end(e));
-			assert(equal(e, e));
-			assert(compare(e, e) == 0);
-		}
-
-		return true;
-	}
-
-#endif // _DEBUG
-
-#pragma endregion array
-
-}
 
 #if 0
 #include "fms_function.h"
