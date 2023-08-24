@@ -33,20 +33,20 @@ namespace fms {
 
 	// "All happy iterables begin alike..."
 	template<iterable I>
-	inline I begin(const I& i)
+	constexpr I begin(const I& i)
 	{
 		return i;
 	}
 	// "...but each iterable ends after its own fashion."
 	template<iterable I>
-	inline auto end(const I& i) -> decltype(i.end())
+	constexpr auto end(const I& i) -> decltype(i.end())
 	{
 		return i.end();
 	}
 
 	// all values are equal
 	template<iterable I, iterable J>
-	inline bool equal(I i, J j)
+	constexpr bool equal(I i, J j)
 	{
 		for (; i and j; ++i, ++j) {
 			if (*i != *j) {
@@ -59,7 +59,7 @@ namespace fms {
 
 	// three way lexicographical compare
 	template<iterable I, iterable J>
-	inline auto compare(I i, J j)
+	constexpr auto compare(I i, J j)
 	{
 		for (; i and j; ++i, ++j) {
 			auto cmp = *i <=> *j;
@@ -73,40 +73,45 @@ namespace fms {
 		return T(!!i) <=> T(!!j);
 	}
 
-#pragma region interval
+#pragma region span
 
-	// STL range [*b, *++b, ..., e)
+	// STL range [b, e)
 	template<class I>
-	class interval {
+	class span {
 		I b, e;
 	public:
 		using iterator_concept = std::forward_iterator_tag;
 		using iterator_category = std::forward_iterator_tag;
 		//using iterator_concept = typename I::iterator_concept;
 		//using iterator_category = typename I::iterator_category;
-		using difference_type = typename std::iterator_traits<I>::difference_type;
+		//using difference_type = typename std::iterator_traits<I>::difference_type;
 		using value_type = typename std::iterator_traits<I>::value_type;
 		using reference = typename std::iterator_traits<I>::reference;
 
-		interval()
+		constexpr span()
 		{ }
-		interval(I b, I e)
+		constexpr span(I b, I e)
 			: b(b), e(e)
 		{ }
-		auto operator<=>(const interval&) const = default;
-		explicit operator bool() const
+		constexpr span(const span&) = default;
+		constexpr span& operator=(const span&) = default;
+		constexpr ~span() = default;
+
+		constexpr auto operator<=>(const span&) const = default;
+
+		constexpr explicit operator bool() const
 		{
 			return b != e;
 		}
-		auto end() const
+		constexpr auto end() const
 		{
-			return interval(e, e);
+			return span(e, e);
 		}
-		value_type operator*() const
+		constexpr value_type operator*() const
 		{
 			return *b;
 		}
-		interval& operator++()
+		constexpr span& operator++()
 		{
 			if (b != e) {
 				++b;
@@ -114,63 +119,65 @@ namespace fms {
 
 			return *this;
 		}
-	};
-
 #ifdef _DEBUG
 
-	template<class T>
-	inline bool test_interval()
-	{
-		T t[] = { 0, 1, 2 };
-		{ // ctors, <=>
-			interval<T*> i(t, t + 3);
-			assert(i);
-			auto i2(i);
-			assert(i2);
-			assert(i2 == i);
-			i = i2;
-			assert(i);
-			assert(!(i != i2));
-			assert(i <= i2);
-			assert(!(i < i2));
-			assert(i2 >= i);
-			assert(!(i2 > i));
-		}
+		static int test()
 		{
-			interval<T*> i(t + 1, t + 3);
-			assert(i);
-			assert(*i == 1);
-			++i;
-			assert(i);
-			assert(*i == 2);
-		}
-		{
-			interval<T*> i(t, t + 3);
-			assert(i);
-			assert(*i == 0);
-			++i;
-			assert(i);
-			assert(*i == 1);
-			++i;
-			assert(i);
-			assert(*i == 2);
-			++i;
-			assert(!i);
-		}
-		{
-			T u(0);
-			for (auto i : interval<T*>(t, t + 3)) {
-				assert(i == u);
-				++u;
+			using T = value_type;
+			static constexpr T t[] = { 0, 1, 2 };
+			{ // ctors, <=>
+				constexpr auto i = span(t, t + 3);
+				static_assert(i);
+				constexpr auto i2(i);
+				static_assert(i2);
+				static_assert(i2 == i);
+				constexpr auto i3 = i2;
+				static_assert(i3);
+				static_assert(!(i3 != i2));
+				static_assert(i3 <= i2);
+				static_assert(!(i3 < i2));
+				static_assert(i2 >= i3);
+				static_assert(!(i2 > i3));
 			}
-		}
+			{
+				auto i = span(t, t + 3);
+				assert(i);
+				assert(*i == t[0]);
+				++i;
+				assert(i);
+				assert(*i == t[1]);
+				assert(*++i == t[2]);
+				++i;
+				assert(!i);
+			}
+			{
+				span i(t, t + 3);
+				assert(i);
+				assert(*i == 0);
+				++i;
+				assert(i);
+				assert(*i == 1);
+				++i;
+				assert(i);
+				assert(*i == 2);
+				++i;
+				assert(!i);
+			}
+			{
+				T u(0);
+				for (auto i : span(t, t + 3)) {
+					assert(i == u);
+					++u;
+				}
+			}
 
-		return true;
-	}
+			return true;
+		}
 
 #endif // _DEBUG
+	};
 
-#pragma endregion interval
+#pragma endregion span
 
 	template<class T>
 	class constant {
@@ -182,10 +189,15 @@ namespace fms {
 		using value_type = std::remove_cv_t<T>;
 		using reference = T&;
 
-		constant(T t = std::numeric_limits<T>::max())
+		constexpr constant(T t = std::numeric_limits<T>::max())
 			: t(t)
 		{ }
+		constexpr constant(const constant&) = default;
+		constexpr constant& operator=(const constant&) = default;
+		constexpr ~constant() = default;
+
 		auto operator<=>(const constant&) const = default;
+		
 		explicit operator bool() const
 		{
 			return true;
@@ -206,6 +218,37 @@ namespace fms {
 		{
 			return *this;
 		}
+#ifdef _DEBUG
+		static int test()
+		{
+			{
+				constant i;
+				assert(i);
+				auto i2{ i };
+				assert(i == i2);
+				i = i2;
+				assert(!(i2 != i));
+
+				assert(*i == std::numeric_limits<T>::max());
+				++i;
+				assert(i);
+				assert(*i == std::numeric_limits<T>::max());
+			}
+			{
+				T u(0);
+				int n = 3;
+				for (auto i : constant(u)) {
+					assert(i == u);
+					--n;
+					if (n == 0) {
+						break;
+					}
+				}
+			}
+
+			return 0;
+		}
+#endif // _DEBUG
 	};
 
 #pragma region iota

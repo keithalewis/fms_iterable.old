@@ -5,9 +5,11 @@
 
 using namespace fms;
 
-bool test_interval_i = test_interval<int>();
-bool test_interval_f = test_interval<float>();
-bool test_interval_d = test_interval<double>();
+bool test_span_i = span<const int*>::test();
+bool test_span_f = span<const float*>::test();
+bool test_span_d = span<const double*>::test();
+
+bool test_constant_i = constant<int>::test();
 
 bool test_iota_i = test_iota<int>();
 bool test_iota_f = test_iota<float>();
