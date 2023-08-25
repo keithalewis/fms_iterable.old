@@ -105,9 +105,7 @@ namespace fms {
 			}
 			constexpr ptr& operator++()
 			{
-				if (operator bool()) {
-					++p;
-				}
+				++p;
 
 				return *this;
 			}
@@ -151,99 +149,10 @@ namespace fms {
 			return 0;
 		}
 #endif // _DEBUG
-		// null terminated array
-		template<class T>
-		class null_ptr : public ptr<T> {
-		public:
-			using iterator_concept = std::forward_iterator_tag;
-			using iterator_category = std::forward_iterator_tag;
-			using difference_type = ptrdiff_t;
-			using value_type = std::remove_cv_t<T>;
 
-			constexpr null_ptr(T* p)
-				: ptr<T>(p)
-			{ }
+	// null terminated array should be null(ptr(i))
+	// defined by until([](auto i) { return *i == 0; }, i)
 
-			constexpr null_ptr end() const
-			{
-				using fms::end;
-
-				return end(*this);
-			}
-
-			constexpr explicit operator bool() const override
-			{
-				return ptr<T>::operator*() != 0;
-			}
-			/*
-			constexpr null_ptr(const null_ptr&) = default;
-			constexpr null_ptr& operator=(const null_ptr&) = default;
-			constexpr ~null_ptr() = default;
-
-			constexpr null_ptr begin() const
-			{
-				return *this;
-			}
-			constexpr null_ptr end() const
-			{
-				return null_ptr();
-			}
-
-			constexpr explicit operator bool() const
-			{
-				return *this;
-			}
-			constexpr T operator*() const
-			{
-				return *ptr<T>::p;
-			}
-			constexpr null_ptr& operator++()
-			{
-				++ptr<T>::p;
-
-				return *this;
-			}
-			constexpr null_ptr operator++(int)
-			{
-				auto p_ = *this;
-
-				operator++();
-
-				return p_;
-			}
-			*/
-		};
-
-#ifdef _DEBUG
-		inline int null_ptr_test()
-		{
-			{
-				static constexpr int i[] = { 0, 1, 2 };
-				constexpr auto ii = null_ptr(i);
-				static_assert(ii);
-				static_assert(*ii == 0);
-				constexpr auto i2(ii);
-				static_assert(i2);
-				static_assert(ii == i2);
-				constexpr auto i3 = i2;
-				static_assert(i3);
-				static_assert(!(i3 != i2));
-			}
-			{
-				int i[] = { 0, 1, 2 };
-				auto ii = ptr(i);
-				assert(ii);
-				assert(*ii == 0);
-				++ii;
-				assert(*ii == 1);
-				assert(*ii++ == 1);
-				assert(*ii == 2);
-				++ii;
-			}
-
-			return 0;
-		}
-#endif // _DEBUG
 	} // namespace iterable
 
 #if 0
