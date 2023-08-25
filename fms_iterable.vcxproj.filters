@@ -27,6 +27,12 @@
     <ClInclude Include="fms_numeric.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="fms_iterable_iota.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fms_iterable_copy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fms_iterable.cpp">

@@ -1,41 +1,31 @@
 // fms_function.h - functions for iterables
+#pragma once
 #include "fms_iterable.h"
 
 namespace fms {
 
 #pragma region all
 
-	// return end or first false element
+	// return first false element or end
 	template<iterable I>
-	inline constexpr I all(I i)
+	constexpr I all(I i)
 	{
 		return !i or !*i ? i : all(++i);
 	}
 
 #ifdef _DEBUG
 
-	template<iterable I>
-	inline bool test_all(const I& is)
+	inline int all_test()
 	{
-		bool b = true; // all({}) = true
-
-		for (auto i : is) {
-			if (!i) {
-				b = false;
-				break;
-			}
+		constexpr int i[] = { 1, 2, 3 };
+		{
+			constexpr auto is = array(i);
+			static_assert(*is == i[0]);
+			//constexpr auto aa = all(is);
+			//static_assert(all(is) == is.end());
+			//assert(!all(i.end()));
 		}
 
-		auto as = all(is);
-
-		if (b) {
-			assert(!as);
-			assert(as == is.end());
-		}
-		else {
-			assert(as);
-			assert(!*as);
-		}
 	}
 
 #endif // _DEBUG

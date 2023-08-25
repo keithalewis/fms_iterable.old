@@ -1,41 +1,52 @@
 // fms_iterable.cpp
 #include <cassert>
 #include <iostream>
-#include "fms_iterable.h"
+#include "fms_iterable_iota.h"
+//#include "fms_function.h"
 
 using namespace fms;
 
-bool test_span_i = span<const int*>::test();
-bool test_span_f = span<const float*>::test();
-bool test_span_d = span<const double*>::test();
+int test_ptr = iterable::ptr_test();
+int test_iota_i = iterable::iota<int>::test();
+//int test_iota_f = iterable::iota<float>::test();
+//int test_iota_d = iterable::iota<double>::test();
 
-bool test_constant_i = constant<int>::test();
-
-bool test_iota_i = iota<int>::test();
-bool test_iota_f = iota<float>::test();
-bool test_iota_d = iota<double>::test();
-
-bool test_array_i = array<int>::test();
-bool test_array_f = array<float>::test();
-bool test_array_d = array<double>::test();
+int main()
+{
+	return 0;
+}
 
 /*
-bool test_pointer_ = test_pointer();
-bool test_list_ = test_list();
-bool test_null_ = test_null();
-bool test_constant_i = test_constant<int>();
-bool test_until_ = test_until();
-bool test_take_i = test_take<int>();
-bool test_scan_ = test_scan();
-bool test_when_ = test_when();
-bool test_mask_ = test_mask();
-bool test_epsilon_d = test_epsilon<double>();
-bool test_epsilon_f = test_epsilon<float>();
-bool test_factorial_i = test_factorial<int>();
-bool test_factorial_d = test_factorial<double>();
-bool test_join_ = test_join();
+int test_span_i = span<const int*>::test();
+int test_span_f = span<const float*>::test();
+int test_span_d = span<const double*>::test();
 
-bool test_copy = []() {
+int test_constant_i = constant<int>::test();
+
+int test_array_i = array<int>::test();
+int test_array_f = array<float>::test();
+int test_array_d = array<double>::test();
+*/
+
+//int test_all = all_test();
+
+/*
+int test_pointer_ = test_pointer();
+int test_list_ = test_list();
+int test_null_ = test_null();
+int test_constant_i = test_constant<int>();
+int test_until_ = test_until();
+int test_take_i = test_take<int>();
+int test_scan_ = test_scan();
+int test_when_ = test_when();
+int test_mask_ = test_mask();
+int test_epsilon_d = test_epsilon<double>();
+int test_epsilon_f = test_epsilon<float>();
+int test_factorial_i = test_factorial<int>();
+int test_factorial_d = test_factorial<double>();
+int test_join_ = test_join();
+
+int test_copy = []() {
 	{
 		int i[] = { 1,2,3 }, j[3];
 		assert(copy(array(i), array(j)));
@@ -88,7 +99,7 @@ struct quicksort : public I {
 	};
 };
 
-bool test_qsort = []() {
+int test_qsort = []() {
 	{
 		int i[] = { 3,2,1,4 };
 		//auto s = qsort(array(i));
@@ -119,78 +130,4 @@ inline constexpr void incr(I& i, Is&... is)
 	incr(is...);
 }
 */
-int main()
-{
-	/*
-	{
-		iota i0(0), i1(1);
-		incr(i0, i1);
-		assert(*i0 == 1 and *i1 == 2);
-		auto l = make_lift(i0, i1);
-		auto printer = [](auto&... args) {
-			((std::cout << *args << " "), ...);
-		};
-		l(printer);
-		l([](auto&... is) { return incr(is...); });
-		assert(*i0 == 2 and *i1 == 3);
-		int i;
-		i = 0;
-		
 
-	}
-	constexpr double eps = std::numeric_limits<double>::epsilon();
-	{
-		double x = 1;
-		auto xn = power(x) / factorial(0.);
-		double expx = add(epsilon(xn));
-		double ex = exp(x);
-		assert(std::fabs(ex - expx) <= eps);
-	}
-	{
-		double x = 1;
-		assert(std::fabs(exp(x) - add(epsilon(power(x) / factorial(0.)))) <= eps);
-	}
-	{
-		// filter
-		auto e = (iota(0) | [](const auto& i) { return *i % 2; });
-		assert(e);
-		assert(*e == 1);
-		++e;
-		assert(e);
-		assert(*e == 3);
-	}
-	{
-		auto i = iota(0);
-		// mask
-		auto o = i & (i % 2);
-		assert(o);
-		assert(*o == 1);
-		++o;
-		assert(*o == 3);
-	}
-	{
-		auto i = iota(0);
-		// mask
-		auto o = i & ~(i % 2);
-		assert(o);
-		assert(*o == 0);
-		++o;
-		assert(*o == 2);
-	}
-	{
-		iota i(0);
-		// mask
-		auto o = i & i % 2 == 0;
-		assert(o);
-		assert(*o == 0);
-		++o;
-		assert(*o == 2);
-	}
-	{
-		//??? ostream_joiner
-		copy(take(3, iota(0)), std::ostream_iterator<int>(std::cout, ", "));
-	}
-	*/
-
-	return 0;
-}

@@ -1,5 +1,5 @@
 // fms_iterable.h - iterators with `explicit operator bool() const`
-//#pragma once
+#pragma once
 #ifdef _DEBUG
 #include <cassert>
 #endif
@@ -7,37 +7,251 @@
 #include <concepts>
 //#include <functional>
 #include <iterator>
-#include <limits>
-#include <numeric>
+//#include <limits>
+//#include <numeric>
 //#include <utility>
-
-// to make tests return false instead of abort
-// #define assert(e) if (!(e)) { return false; }
 
 namespace fms {
 
 	template<class I>
-	concept iterable = requires (I i) {
-		//std::is_base_of_v<std::forward_iterator_tag, typename I::interator_category>;
-		//typename I::iterator_concept;
-		//typename I::iterator_category;
-		//typename I::difference_type;
-		typename I::value_type;
-		//typename I::reference;
-		{ !!i } -> std::same_as<bool>;
-		{  *i } -> std::convertible_to<typename I::value_type>;
-		{ ++i } -> std::same_as<I&>;
-		//{ i.operator<=>(i) };
-		//{ i.end() } -> std::same_as<I>;
-	};
+	concept forward_iterable = requires (I i) {
+		{ i.operator bool() } -> std::same_as<bool>;
+	}
+	&& std::forward_iterator<I>;
 
-	// "All happy iterables begin alike..."
+	template<class I>
+	concept input_iterable = requires (I i) {
+		{ i.operator bool() } -> std::same_as<bool>;
+	}
+	&& std::input_iterator<I>;
+
+	template<class I, class T>
+	concept ouput_iterable = requires (I i) {
+		{ i.operator bool() } -> std::same_as<bool>;
+	}
+	&& std::output_iterator<I, T>;
+
+	template<std::forward_iterator I, std::forward_iterator J>
+	// three way lexicographical compare
+	constexpr auto compare(I i, J j)
+	{
+		using T = std::common_type_t<typename I::value_type, typename J::value_type>;
+
+		while (i and j) {
+			const auto cmp = T(*i++) <=> T(*j++);
+			if (cmp != 0) {
+				return cmp;
+			}
+		}
+
+
+		return T(!!i) <=> T(!!j);
+	}
+	template<std::forward_iterator I, std::forward_iterator J>
+	constexpr bool equal(I i, J j)
+	{
+		return compare(i, j) == 0;
+	}
+
+	template<std::forward_iterator I>
+	constexpr I end(I i)
+	{
+		if constexpr (requires (I i) { i.end(); }) {
+			return i.end();
+		}
+
+		while (i++)
+			;
+
+		return i;
+	}
+
+	namespace iterable {
+		// unsafe pointer iterator
+		template<class T>
+		class ptr {
+			T* p;
+		public:
+			using iterator_concept = std::forward_iterator_tag;
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type = ptrdiff_t;
+			using value_type = std::remove_cv_t<T>;
+
+			constexpr ptr(T* p = nullptr)
+				: p(p)
+			{ }
+			constexpr ptr(const ptr&) = default;
+			constexpr ptr& operator=(const ptr&) = default;
+			constexpr ~ptr() = default;
+
+			constexpr bool operator==(const ptr&) const = default;
+
+			constexpr ptr begin() const
+			{
+				return *this;
+			}
+			constexpr ptr end() const
+			{
+				return ptr();
+			}
+
+			constexpr explicit operator bool() const
+			{
+				return p != nullptr;
+			}
+			constexpr value_type operator*() const
+			{
+				return *p;
+			}
+			constexpr ptr& operator++()
+			{
+				if (operator bool()) {
+					++p;
+				}
+
+				return *this;
+			}
+			constexpr ptr operator++(int)
+			{
+				auto p_ = *this;
+
+				operator++();
+
+				return p_;
+			}
+		};
+
+#ifdef _DEBUG
+		inline int ptr_test()
+		{
+			{
+				static constexpr int i[] = { 0, 1, 2 };
+				constexpr auto ii = ptr(i);
+				static_assert(ii);
+				static_assert(*ii == 0);
+				constexpr auto i2(ii);
+				static_assert(i2);
+				static_assert(ii == i2);
+				constexpr auto i3 = i2;
+				static_assert(i3);
+				static_assert(!(i3 != i2));
+			}
+			{
+				int i[] = { 0, 1, 2 };
+				auto ii = ptr(i);
+				assert(ii);
+				assert(*ii == 0);
+				++ii;
+				assert(*ii == 1);
+				assert(*ii++ == 1);
+				assert(*ii == 2);
+				++ii;
+			}
+
+			return 0;
+		}
+#endif // _DEBUG
+		// null terminated array
+		template<class T>
+		class null_ptr : public ptr<T> {
+		public:
+			using iterator_concept = std::forward_iterator_tag;
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type = ptrdiff_t;
+			using value_type = std::remove_cv_t<T>;
+
+			constexpr null_ptr(T* p)
+				: ptr<T>(p)
+			{ }
+
+			constexpr null_ptr end() const
+			{
+				using fms::end;
+
+				return end(*this);
+			}
+
+			constexpr explicit operator bool() const override
+			{
+				return ptr<T>::operator*() != 0;
+			}
+			/*
+			constexpr null_ptr(const null_ptr&) = default;
+			constexpr null_ptr& operator=(const null_ptr&) = default;
+			constexpr ~null_ptr() = default;
+
+			constexpr null_ptr begin() const
+			{
+				return *this;
+			}
+			constexpr null_ptr end() const
+			{
+				return null_ptr();
+			}
+
+			constexpr explicit operator bool() const
+			{
+				return *this;
+			}
+			constexpr T operator*() const
+			{
+				return *ptr<T>::p;
+			}
+			constexpr null_ptr& operator++()
+			{
+				++ptr<T>::p;
+
+				return *this;
+			}
+			constexpr null_ptr operator++(int)
+			{
+				auto p_ = *this;
+
+				operator++();
+
+				return p_;
+			}
+			*/
+		};
+
+#ifdef _DEBUG
+		inline int null_ptr_test()
+		{
+			{
+				static constexpr int i[] = { 0, 1, 2 };
+				constexpr auto ii = null_ptr(i);
+				static_assert(ii);
+				static_assert(*ii == 0);
+				constexpr auto i2(ii);
+				static_assert(i2);
+				static_assert(ii == i2);
+				constexpr auto i3 = i2;
+				static_assert(i3);
+				static_assert(!(i3 != i2));
+			}
+			{
+				int i[] = { 0, 1, 2 };
+				auto ii = ptr(i);
+				assert(ii);
+				assert(*ii == 0);
+				++ii;
+				assert(*ii == 1);
+				assert(*ii++ == 1);
+				assert(*ii == 2);
+				++ii;
+			}
+
+			return 0;
+		}
+#endif // _DEBUG
+	} // namespace iterable
+
+#if 0
 	template<iterable I>
 	constexpr I begin(const I& i)
 	{
-		return i;
+		return i.begin();
 	}
-	// "...but each iterable ends after its own fashion."
 	template<iterable I>
 	constexpr auto end(const I& i) -> decltype(i.end())
 	{
@@ -236,110 +450,6 @@ namespace fms {
 #endif // _DEBUG
 	};
 
-	// [b, b + 1, ..., e)
-	template<class T>
-	class iota {
-		T b, e;
-	public:
-		using iterator_concept = std::forward_iterator_tag;
-		using iterator_category = std::forward_iterator_tag;
-		using difference_type = ptrdiff_t;
-		using value_type = std::remove_cv_t<T>;
-		using reference = T&;
-
-		constexpr iota(T b = 0, T e = std::numeric_limits<T>::max())
-			: b(b), e(e)
-		{ }
-		constexpr iota(const iota&) = default;
-		constexpr iota& operator=(const iota&) = default;
-		constexpr ~iota() = default;
-
-		constexpr bool operator==(const iota&) const = default;	
-		auto end() const
-		{
-			return iota(e, e);
-		}
-
-		constexpr explicit operator bool() const
-		{
-			return b < e;
-		}
-		constexpr value_type operator*() const
-		{
-			return b;
-		}
-		constexpr iota& operator++()
-		{
-			if (b < e) {
-				++b;
-			}
-
-			return *this;
-		}
-#ifdef _DEBUG
-
-		static int test()
-		{
-			{
-				assert(equal(iota(0, 3), iota(0, 3)));
-				assert(!equal(iota(0, 2), iota(0, 3)));
-			}
-			{
-				assert(compare(iota(0, 3), iota(0, 3)) == 0);
-				assert(compare(iota(0, 2), iota(0, 3)) < 0);
-				assert(compare(iota(0, 3), iota(0, 2)) > 0);
-			}
-			{
-				assert(compare(iota(0, 3), iota<float>(0, 3)) == 0);
-				assert(compare(iota<double>(0, 2), iota(0, 3)) < 0);
-				assert(compare(iota<float>(0, 3), iota<double>(0, 2)) > 0);
-			}
-			{ // ctors, <=>
-				constexpr auto i = iota<T>{};
-				static_assert(i);
-				constexpr auto i2(i);
-				static_assert(i2);
-				static_assert(i2 == i);
-				constexpr auto i3 = i2;
-				assert(i3);
-				assert(!(i3 != i2));
-			}
-			{
-				iota<T> i(1);
-				assert(i);
-				assert(*i == 1);
-				++i;
-				assert(i);
-				assert(*i == 2);
-			}
-			{
-				iota<T> i(0, 3);
-				assert(i);
-				assert(*i == 0);
-				++i;
-				assert(i);
-				assert(*i == 1);
-				++i;
-				assert(i);
-				assert(*i == 2);
-				++i;
-				assert(!i);
-			}
-			{
-				T t(0);
-				for (auto i : iota<T>(0, 3)) {
-					assert(i == t);
-					++t;
-				}
-				assert(t == 3);
-			}
-
-			return true;
-		}
-
-#endif // _DEBUG
-	};
-
 	// create an iterable from a random access array
 	// nullptr gives 'empty' iterator
 	template<class T>
@@ -486,7 +596,7 @@ namespace fms {
 
 #endif // _DEBUG
 	};
-
+#endif // 0
 } // namespace fms
 
 #if 0

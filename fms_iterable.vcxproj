@@ -145,6 +145,8 @@
   <ItemGroup>
     <ClInclude Include="fms_function.h" />
     <ClInclude Include="fms_iterable.h" />
+    <ClInclude Include="fms_iterable_copy.h" />
+    <ClInclude Include="fms_iterable_iota.h" />
     <ClInclude Include="fms_numeric.h" />
     <ClInclude Include="fms_tuple.h" />
   </ItemGroup>
