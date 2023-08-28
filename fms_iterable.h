@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #include <cassert>
 #endif
-#include <compare>
+//#include <compare>
 #include <concepts>
 //#include <functional>
 #include <iterator>
@@ -18,18 +18,6 @@ namespace fms {
 		{ i.operator bool() } -> std::same_as<bool>;
 	}
 	&& std::forward_iterator<I>;
-
-	template<class I>
-	concept input_iterable = requires (I i) {
-		{ i.operator bool() } -> std::same_as<bool>;
-	}
-	&& std::input_iterator<I>;
-
-	template<class I, class T>
-	concept ouput_iterable = requires (I i) {
-		{ i.operator bool() } -> std::same_as<bool>;
-	}
-	&& std::output_iterator<I, T>;
 
 	template<std::forward_iterator I, std::forward_iterator J>
 	// three way lexicographical compare
@@ -75,7 +63,12 @@ namespace fms {
 			using iterator_concept = std::forward_iterator_tag;
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type = ptrdiff_t;
+			using pointer = T*;
 			using value_type = std::remove_cv_t<T>;
+			using reference = value_type&;
+			//using iter_value_t = value_type;
+			//using iter_reference_t = value_type&;
+			//using iter_rvalue_reference_t = value_type&&;
 
 			constexpr ptr(T* p = nullptr)
 				: p(p)
@@ -85,6 +78,9 @@ namespace fms {
 			constexpr ~ptr() = default;
 
 			constexpr bool operator==(const ptr&) const = default;
+			constexpr pointer operator->() {
+				return p;
+			}
 
 			constexpr ptr begin() const
 			{
@@ -100,6 +96,10 @@ namespace fms {
 				return p != nullptr;
 			}
 			constexpr value_type operator*() const
+			{
+				return *p;
+			}
+			constexpr reference operator*()
 			{
 				return *p;
 			}
@@ -144,6 +144,18 @@ namespace fms {
 				assert(*ii++ == 1);
 				assert(*ii == 2);
 				++ii;
+			}
+			{
+				int i[] = { 0, 1, 2 };
+				auto ii = ptr(i);
+				*i = 3;
+				assert(*i == 3);
+				*++ii = 4;
+				ii++;
+				*ii = 5;
+				assert(i[0] == 3);
+				assert(i[1] == 4);
+				assert(i[2] == 5);
 			}
 
 			return 0;
