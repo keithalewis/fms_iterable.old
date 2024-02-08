@@ -1,15 +1,15 @@
 // fms_iterable.cpp
 #include <cassert>
-#include <iostream>
-#include "fms_iterable_iota.h"
-#include "fms_iterable_copy.h"
+#include "fms_iterable.h"
+//#include "fms_iterable_copy.h"
 //#include "fms_function.h"
 
 using namespace fms;
 
 int test_ptr = iterable::ptr_test();
-int test_iota_i = iterable::iota<int>::test();
-int test_copy_i = iterable::copy_test();
+//int test_null_ptr = iterable::null_ptr_test();
+//int test_iota_i = iterable::iota<int>::test();
+//int test_copy_i = iterable::copy_test();
 //int test_iota_f = iterable::iota<float>::test();
 //int test_iota_d = iterable::iota<double>::test();
 

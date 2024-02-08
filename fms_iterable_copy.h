@@ -4,7 +4,7 @@
 
 namespace fms::iterable {
 
-	template<forward_iterable I, forward_iterable O>
+	template<forward I, forward O>
 	constexpr O copy(I i, O o)
 	{
 		while (i and o) {
