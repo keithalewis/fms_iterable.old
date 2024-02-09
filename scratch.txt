@@ -175,50 +175,50 @@
 		return compare(i, j) == 0;
 	}
 
-	// STL range [b, e)
-	template<class I>
-	class span {
-		I b, e;
-	public:
-		using iterator_concept = std::forward_iterator_tag;
-		using iterator_category = std::forward_iterator_tag;
-		//using iterator_concept = typename I::iterator_concept;
-		//using iterator_category = typename I::iterator_category;
-		//using difference_type = typename std::iterator_traits<I>::difference_type;
-		using value_type = typename std::iterator_traits<I>::value_type;
-		using reference = typename std::iterator_traits<I>::reference;
+		// STL range [b, e)
+		template<class I>
+		class span {
+			I b, e;
+		public:
+			using iterator_concept = std::forward_iterator_tag;
+			using iterator_category = std::forward_iterator_tag;
+			//using iterator_concept = typename I::iterator_concept;
+			//using iterator_category = typename I::iterator_category;
+			//using difference_type = typename std::iterator_traits<I>::difference_type;
+			using value_type = typename std::iterator_traits<I>::value_type;
+			using reference = typename std::iterator_traits<I>::reference;
 
-		constexpr span()
-		{ }
-		constexpr span(I b, I e)
-			: b(b), e(e)
-		{ }
-		constexpr span(const span&) = default;
-		constexpr span& operator=(const span&) = default;
-		constexpr ~span() = default;
+			constexpr span()
+			{ }
+			constexpr span(I b, I e)
+				: b(b), e(e)
+			{ }
+			constexpr span(const span&) = default;
+			constexpr span& operator=(const span&) = default;
+			constexpr ~span() = default;
 
-		constexpr bool operator==(const span&) const = default;
-		constexpr auto end() const
-		{
-			return span(e, e);
-		}
-
-		constexpr explicit operator bool() const
-		{
-			return b != e;
-		}
-		constexpr value_type operator*() const
-		{
-			return *b;
-		}
-		constexpr span& operator++()
-		{
-			if (b != e) {
-				++b;
+			constexpr bool operator==(const span&) const = default;
+			constexpr auto end() const
+			{		
+				return span(e, e);
 			}
 
-			return *this;
-		}
+			constexpr explicit operator bool() const
+			{
+				return b != e;
+			}
+			constexpr value_type operator*() const
+			{
+				return *b;
+			}
+			constexpr span& operator++()
+			{
+				if (b != e) {
+					++b;
+				}
+
+				return *this;
+			}
 #ifdef _DEBUG
 
 		static int test()
@@ -2061,3 +2061,19 @@ inline auto operator,(const I& i, const J& j)
 	return fms::join(i, j);
 }
 #endif // 0
+
+string s = "
+19, 13, 30 @ -2,  1, -2
+18, 19, 22 @ -1, -1, -2 
+20, 25, 34 @ -2, -2, -4 
+12, 31, 28 @ -1, -2, -1 
+20, 19, 15 @  1, -5, -3
+"
+
+t = split(nl, s) -- "19, 13, 30 @ -2,  1, -2", ...
+u = split('@', t) -- "19, 13, 30 ", " -2,  1, -2", ...
+pair((point, velocity), u)
+
+pair<tuple<int>, tuple<int>>(split('@', split(nl, s)))
+
+pair<tuple<int>, tuple<int>>(s0, s1, s2, s3, ...) -> std::pair(tuple<int>(s0), tuple<int>(s1)), ...

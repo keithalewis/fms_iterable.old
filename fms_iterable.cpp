@@ -6,12 +6,14 @@
 
 using namespace fms;
 
+#ifdef _DEBUG
 int test_ptr = iterable::ptr_test();
 //int test_null_ptr = iterable::null_ptr_test();
 //int test_iota_i = iterable::iota<int>::test();
 //int test_copy_i = iterable::copy_test();
 //int test_iota_f = iterable::iota<float>::test();
 //int test_iota_d = iterable::iota<double>::test();
+#endif // _DEBUG
 
 int main()
 {
