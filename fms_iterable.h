@@ -10,12 +10,13 @@
 //#include <limits>
 //#include <numeric>
 //#include <utility>
+#include <tuple>
 
 namespace fms::iterable {
 
-	// test iterator interval [b, e)
+	// Iterable interval [b, e)
 	template<class T>
-	class interval {
+	class iota {
 		T b, e;
 	public:
 		using iterator_category = std::forward_iterator_tag;
@@ -24,21 +25,24 @@ namespace fms::iterable {
 		using pointer = T*;
 		using reference = T&;
 
-		interval(T b, T e)
+		iota(T b, T e)
 			: b(b), e(e)
 		{ }
 
-		bool operator==(const interval&) const = default;
-	
-		interval begin() const noexcept
+		// Equality comparable.
+		bool operator==(const iota&) const = default;
+
+		// STL friendly
+		iota begin() const noexcept
 		{
 			return *this;
 		}
-		interval end() const noexcept
+		iota end() const noexcept
 		{
-			return interval(e, e);
+			return iota(e, e);
 		}
 
+		// Detect end of iterable.
 		explicit operator bool() const noexcept
 		{
 			return b != e;
@@ -49,7 +53,7 @@ namespace fms::iterable {
 			return b;
 		}
 
-		interval& operator++() noexcept
+		iota& operator++() noexcept
 		{
 			if (operator bool()) {
 				++b;
@@ -57,7 +61,7 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		interval operator++(int) noexcept
+		iota operator++(int) noexcept
 		{
 			auto tmp = *this;
 
@@ -67,12 +71,11 @@ namespace fms::iterable {
 		}
 	};
 #ifdef _DEBUG
-	inline int interval_test()
+	inline int iota_test()
 	{
 		{
-			interval i(0, 3);
+			iota i(0, 3);
 			assert(i);
-			assert(!(i != i));
 
 			auto i2{ i };
 			assert(i2 == i);
@@ -91,50 +94,93 @@ namespace fms::iterable {
 #endif // _DEBUG
 
 	template<class I>
-	concept input_or_output = requires(I i) {
-		{ i.operator bool() } -> std::same_as<bool>;
-	}
-	&& std::input_or_output_iterator<I>;
+	concept input_or_output = std::input_or_output_iterator<I>
+		&& requires(I i) {
+			{ i.operator bool() } -> std::same_as<bool>;
+	};
 
+	// Length of iterable.
 	template<input_or_output I>
-	constexpr size_t length(I i, size_t n = 0)
+	constexpr size_t count(I i, size_t n = 0)
 	{
-		while (i++) {
-			++n;
+		if (!i) return n;
+
+		return count(++i, n + 1);
+	}
+#ifdef _DEBUG
+	inline int count_test()
+	{
+		{
+			assert(3 == count(iota(0, 3)));
+			assert(5 == count(iota(0, 3), count(iota(3, 5))));
 		}
 
-		return n;
+		return 0;
 	}
+#endif // _DEBUG
+
+	// Last element of iterable.
+	template<input_or_output I>
+	inline I back(I i)
+	{
+		I _i = i;
+
+		while (i) {
+			_i = i++;
+		}
+
+		return _i;
+	}
+#ifdef _DEBUG
+	inline int back_test()
+	{
+		{
+			assert(2 == *back(iota(0, 3)));
+		}
+
+		return 0;
+	}
+#endif // _DEBUG
 
 	template<class I>
-	concept forward = requires(I i) {
-		{ i.operator bool() } -> std::same_as<bool>;
-	}
-	&& std::input_iterator<I>
-	&& std::derived_from<typename I::iterator_category, std::forward_iterator_tag>
-	&& std::incrementable<I>
+	concept input = input_or_output<I>
+		&& std::indirectly_readable<I>
+		&& std::equality_comparable<I>
 	;
 
+	template<class I, class T>
+	concept output = input_or_output<I>
+		&& std::indirectly_writable<I, T>
+		&& requires(I i, T&& t) {
+		*i++ = std::forward<T>(t); 
+	};
+
+	template<class I>
+	concept forward = input<I>
+		&& std::derived_from<typename I::iterator_category, std::forward_iterator_tag>
+		&& std::incrementable<I>
+		;
+
 	// three way lexicographical compare
-	template<forward I, forward J, typename T = std::common_type_t<typename I::value_type, typename J::value_type>>
+	template<input_or_output I, input_or_output J> //, typename T = std::common_type_t<typename I::value_type, typename J::value_type>>
 	constexpr auto compare(I i, J j)
 	{
 		while (i and j) {
-			const auto cmp = T(*i++) <=> T(*j++);
+			const auto cmp = *i++ <=> *j++;
 			if (cmp != 0) {
 				return cmp;
 			}
 		}
 
-		return T(i.operator bool()) <=> T(j.operator bool());
+		return i.operator bool() <=> j.operator bool();
 	}
-	template<forward I, forward J>
+	template<input_or_output I, input_or_output J>
 	constexpr bool equal(I i, J j)
 	{
 		return compare(i, j) == 0;
 	}
 
-	template<forward I, forward J>
+	template<input I, class J>
 	constexpr J copy(I i, J j)
 	{
 		while (i) {
@@ -143,6 +189,30 @@ namespace fms::iterable {
 
 		return j;
 	}
+#ifdef _DEBUG
+	inline int copy_test()
+	{
+		{
+			int j[3];
+			copy(iota(0, 3), &j[0]);
+			assert(0 == j[0]);
+			assert(1 == j[1]);
+			assert(2 == j[2]);
+		}
+		{
+			iota i(0, 3);
+			int j[3] = { 3 };
+			for (const auto& k : i) {
+				j[k] = k;
+			}
+			assert(0 == j[0]);
+			assert(1 == j[1]);
+			assert(2 == j[2]);
+		}
+
+		return 0;
+	}
+#endif // _DEBUG
 
 	// unsafe pointer iterator
 	template<class T>
@@ -229,8 +299,7 @@ namespace fms::iterable {
 				}
 			}
 		}
-		{
-			// op bool, op*, op++, op++(int)
+		{ // op bool, op*, op++, op++(int)
 			int i[] = { 0, 1, 2 };
 			auto ii = ptr(i);
 			assert(ii);
@@ -244,17 +313,17 @@ namespace fms::iterable {
 		return 0;
 	}
 #endif // _DEBUG
-#if 0
-	// STL interval [b, e)
+	
+	// Half open interval [b, e)
 	template<class I>
 	class span {
 		I b, e;
 	public:
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = typename I::value_type;
-		using difference_type = typename I::difference_type;
-		using pointer = typename I::pointer;
-		using reference = typename I::reference;
+		using value_type = typename std::iterator_traits<I>::value_type;
+		using difference_type = typename std::iterator_traits<I>::difference_type;
+		using pointer = typename std::iterator_traits<I>::pointer;
+		using reference = typename std::iterator_traits<I>::reference;
 
 		span(I b, I e)
 			: b(b), e(e)
@@ -329,7 +398,7 @@ namespace fms::iterable {
 			span ii(i, i + 3);
 			assert(ii);
 			assert(!(ii != ii));
-			assert(3 == length(ii));
+			assert(3 == count(ii));
 			span i2(i, 3);
 			assert(compare(ii, i2) == 0);
 			assert(equal(ii, i2));
@@ -338,5 +407,67 @@ namespace fms::iterable {
 		return 0;
 	}
 #endif // _DEBUG
+
+#if 0
+	// End when predicate is true.
+	template<forward I, class P>
+	class upto {
+		I i;
+		P p;
+	};
+
+	// Iterable of iterables based on separator.
+	template<forward I, class T = typename I::value_type>
+	class split {
+		I i;
+		T t;
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = I;
+		//using difference_type = typename std::iterator_traits<I>::difference_type;
+		//using pointer = typename std::iterator_traits<I>::pointer;
+		//using reference = typename std::iterator_traits<I>::reference;
+		
+		split(I i, T t)
+			: i(i), t(t)
+		{ }
+
+		bool operator==(const split&) const = default;
+
+		split begin() const noexcept
+		{
+			return *this;
+		}
+		split end() const noexcept
+		{
+			return split(i.end(), t);
+		}
+
+		explicit operator bool() const noexcept
+		{
+			return i;
+		}
+		value_type operator*() const noexcept
+		{
+			return i;
+		}
+		split& operator++() noexcept
+		{
+			if (operator bool()) {
+				while (i and *i == t) {
+					++i;
+				}
+				if (i) {
+					auto j = i;
+					while (j and *j != t) {
+						++j;
+					}
+					i = j;
+				}
+			}
+
+			return *this;
+		}
+	};
 #endif // 0
 } // namespace fms::iterable
