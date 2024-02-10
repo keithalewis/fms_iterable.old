@@ -7,6 +7,7 @@
 using namespace fms;
 
 #ifdef _DEBUG
+int test_interval = iterable::interval_test();
 int test_ptr = iterable::ptr_test();
 //int test_null_ptr = iterable::null_ptr_test();
 //int test_iota_i = iterable::iota<int>::test();
