@@ -491,7 +491,7 @@ int test_vector = []() {
         auto p = array(i);
         auto c = vector<int>(p);
         assert(c);
-        /*
+        
         assert(*c == 1);
         ++c;
         assert(c);
@@ -506,7 +506,7 @@ int test_vector = []() {
 
         vector ccc(cc);
         assert(equal(ccc, c));
-        */
+        
     }
 
     return 0;
