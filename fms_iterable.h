@@ -1,473 +1,1148 @@
-// fms_iterable.h - iterators with `explicit operator bool() const`
+// fms_iterable.h - iterator with operator bool() const to detect the end
 #pragma once
-#ifdef _DEBUG
-#include <cassert>
-#endif
-//#include <compare>
-#include <concepts>
-//#include <functional>
-#include <iterator>
-//#include <limits>
-//#include <numeric>
-//#include <utility>
-#include <tuple>
+#include <functional>
+#include <initializer_list>
+#include <list>
+#include <type_traits>
+#include <vector>
 
 namespace fms::iterable {
 
-	// Iterable interval [b, e)
-	template<class T>
-	class iota {
-		T b, e;
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = T;
-		using difference_type = decltype(e - b);
-		using pointer = T*;
-		using reference = T&;
+/* TODO: concepts
+template<class T> struct interface;
 
-		iota(T b, T e)
-			: b(b), e(e)
-		{ }
+template <typename I>
+concept IsReferenceToBase = std::is_base_of_v<fms::iterable::interface<typename
+I::value_type>, std::remove_reference_t<I>>;
+*/
 
-		// Equality comparable.
-		bool operator==(const iota&) const = default;
+template <class I>
+concept input = requires(I i) {
+    {
+        i.operator bool()
+    } -> std::same_as<bool>;
+    {
+        *i
+    } -> std::convertible_to<typename I::value_type>;
+    //		{ ++i } -> IsReferenceToBase;
+};
 
-		// STL friendly
-		iota begin() const noexcept
-		{
-			return *this;
-		}
-		iota end() const noexcept
-		{
-			return iota(e, e);
-		}
+template <class I>
+concept has_back = requires(I i) {
+    {
+        i.back()
+    } -> std::same_as<I>;
+};
+template <class I>
+concept has_end = requires(I i) {
+    {
+        i.end()
+    } -> std::same_as<I>;
+};
 
-		// Detect end of iterable.
-		explicit operator bool() const noexcept
-		{
-			return b != e;
-		}
+// non-virtual interface for input iterable.
+template <class T>
+struct interface {
+    using value_type = T;
 
-		value_type operator*() const noexcept
-		{
-			return b;
-		}
+    virtual ~interface() {};
 
-		iota& operator++() noexcept
-		{
-			if (operator bool()) {
-				++b;
-			}
+    explicit operator bool() const { return op_bool(); }
+    T operator*() const { return op_star(); }
+    interface& operator++() { return op_incr(); }
 
-			return *this;
-		}
-		iota operator++(int) noexcept
-		{
-			auto tmp = *this;
+private:
+    virtual bool op_bool() const = 0;
+    virtual T op_star() const = 0;
+    virtual interface& op_incr() = 0;
+};
 
-			operator++();
+//
+// Stand alone functions
+//
 
-			return tmp;
-		}
-	};
-#ifdef _DEBUG
-	inline int iota_test()
-	{
-		{
-			iota i(0, 3);
-			assert(i);
+// All elements equal.
+template <input I, input J>
+inline bool
+equal(I i, J j) noexcept
+{
+    while (i && j) {
+        if (*i != *j) {
+            return false;
+        }
+        ++i;
+        ++j;
+    }
 
-			auto i2{ i };
-			assert(i2 == i);
-			i = i2;
-			assert(!(i != i2));
+    return !i && !j; // both done
+}
 
-			assert(0 == *i);
-			assert(1 == *++i);
-			assert(1 == *i++);
-			assert(2 == *i);
-			assert(!++i);
-		}
+// length(i, length(j)) = length(i) + length(j)
+template <input I>
+inline std::size_t
+length(I i, std::size_t n = 0) noexcept
+{
+    while (i) {
+        ++i;
+        ++n;
+    }
 
-		return 0;
-	}
-#endif // _DEBUG
+    return n;
+}
 
-	template<class I>
-	concept input_or_output = std::input_or_output_iterator<I>
-		&& requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
+// Drop at most n from the beginning.
+template <input I>
+inline I
+drop(I i, std::size_t n) noexcept
+{
+    while (i && n) {
+        ++i;
+        --n;
+    }
 
-	// Length of iterable.
-	template<input_or_output I>
-	constexpr size_t count(I i, size_t n = 0)
-	{
-		if (!i) return n;
+    return i;
+}
 
-		return count(++i, n + 1);
-	}
-#ifdef _DEBUG
-	inline int count_test()
-	{
-		{
-			assert(3 == count(iota(0, 3)));
-			assert(5 == count(iota(0, 3), count(iota(3, 5))));
-		}
+// Last element of iterable.
+template <input I>
+inline I
+back(I i)
+{
+    if constexpr (has_back<I>) {
+        return i.back();
+    }
 
-		return 0;
-	}
-#endif // _DEBUG
+    I _i(i);
 
-	// Last element of iterable.
-	template<input_or_output I>
-	inline I back(I i)
-	{
-		I _i = i;
+    while (++_i) {
+        i = _i;
+    }
 
-		while (i) {
-			_i = i++;
-		}
+    return i;
+}
 
-		return _i;
-	}
-#ifdef _DEBUG
-	inline int back_test()
-	{
-		{
-			assert(2 == *back(iota(0, 3)));
-		}
+// For use with STL
+template <class I>
+inline I
+begin(I i)
+{
+    return i;
+}
+// ++back(i)
+template <input I>
+inline I
+end(I i)
+{
+    if constexpr (has_end<I>) {
+        return i.end();
+    }
 
-		return 0;
-	}
-#endif // _DEBUG
+    while (i) {
+        ++i;
+    }
 
-	template<class I>
-	concept input = input_or_output<I>
-		&& std::indirectly_readable<I>
-		&& std::equality_comparable<I>
-	;
+    return i;
+}
 
-	template<class I, class T>
-	concept output = input_or_output<I>
-		&& std::indirectly_writable<I, T>
-		&& requires(I i, T&& t) {
-		*i++ = std::forward<T>(t); 
-	};
+// Make STL container iterable. Assumes lifetime of c.
+template <class C, class T = typename C::value_type>
+class container : public interface<T> {
+    const C& c;
+    typename C::const_iterator i;
 
-	template<class I>
-	concept forward = input<I>
-		&& std::derived_from<typename I::iterator_category, std::forward_iterator_tag>
-		&& std::incrementable<I>
-		;
+public:
+    container(const C& _c)
+        : c(_c)
+        , i(c.begin())
+    {
+    }
 
-	// three way lexicographical compare
-	template<input_or_output I, input_or_output J> //, typename T = std::common_type_t<typename I::value_type, typename J::value_type>>
-	constexpr auto compare(I i, J j)
-	{
-		while (i and j) {
-			const auto cmp = *i++ <=> *j++;
-			if (cmp != 0) {
-				return cmp;
-			}
-		}
+    auto begin() const { return c.begin(); }
+    auto end() const { return c.end(); }
 
-		return i.operator bool() <=> j.operator bool();
-	}
-	template<input_or_output I, input_or_output J>
-	constexpr bool equal(I i, J j)
-	{
-		return compare(i, j) == 0;
-	}
+    // string equality
+    bool operator==(const container& _c) const
+    {
+        return &c == &_c.c && i == _c.i;
+    }
 
-	template<input I, class J>
-	constexpr J copy(I i, J j)
-	{
-		while (i) {
-			*j++ = *i++;
-		}
+    // TODO: size() ???
 
-		return j;
-	}
-#ifdef _DEBUG
-	inline int copy_test()
-	{
-		{
-			int j[3];
-			copy(iota(0, 3), &j[0]);
-			assert(0 == j[0]);
-			assert(1 == j[1]);
-			assert(2 == j[2]);
-		}
-		{
-			iota i(0, 3);
-			int j[3] = { 3 };
-			for (const auto& k : i) {
-				j[k] = k;
-			}
-			assert(0 == j[0]);
-			assert(1 == j[1]);
-			assert(2 == j[2]);
-		}
+    bool op_bool() const override { return i != c.end(); }
+    T op_star() const override { return *i; }
+    container& op_incr() override
+    {
+        if (op_bool()) {
+            ++i;
+        }
 
-		return 0;
-	}
-#endif // _DEBUG
+        return *this;
+    }
+};
 
-	// unsafe pointer iterator
-	template<class T>
-	class ptr {
-		T* p;
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = T;
-		using difference_type = std::ptrdiff_t;
-		using pointer = T*;
-		using reference = T&;
+// Value class.
+template <class T>
+class list : public interface<T> {
+    std::list<T> l;
 
-		ptr(T* p = nullptr) noexcept
-			: p(p)
-		{ }
+public:
+    template <input I>
+    list(I i)
+    {
+        while (i) {
+            l.push_back(*i);
+            ++i;
+        }
+    }
+    // E.g., list({1,2,3})
+    list(const std::initializer_list<T>& l)
+        : l(l)
+    {
+    }
+    list(const list&) = default;
+    list& operator=(const list&) = default;
+    list(list&&) = default;
+    list& operator=(list&&) = default;
+    ~list() = default;
 
-		// Same pointer.
-		bool operator==(const ptr&) const = default;
+    list& push_back(const T& t)
+    {
+        l.push_back(t);
 
-		ptr begin() const noexcept
-		{
-			return *this;
-		}
-		ptr end() const noexcept
-		{
-			return ptr{};
-		}
+        return *this;
+    }
+    list& push_back(T&& t)
+    {
+        l.push_back(t);
 
-		explicit operator bool() const noexcept
-		{
-			return p != nullptr;
-		}
+        return *this;
+    }
+    template <class... Args>
+    list& emplace_back(Args&&... args)
+    {
+        l.emplace_back(args...);
 
-		value_type operator*() const noexcept
-		{
-			return *p;
-		}
-		reference operator*() noexcept
-		{
-			return *p;
-		}
+        return *this;
+    }
 
-		ptr& operator++() noexcept
-		{
-			++p;
+    // same list
+    bool operator==(const list& _l) const { return l == _l.l; }
 
-			return *this;
-		}
-		ptr operator++(int) noexcept
-		{
-			auto tmp = *this;
+    bool op_bool() const override { return !l.empty(); }
+    T op_star() const override { return l.front(); }
+    list& op_incr() override
+    {
+        if (op_bool()) {
+            l.pop_front();
+        }
 
-			operator++();
+        return *this;
+    }
+};
 
-			return tmp;
-		}
-	};
+// Value class.
+template <class T>
+class vector : public interface<T> {
+    std::vector<T> v;
+    std::size_t n;
 
-#ifdef _DEBUG
-	inline int ptr_test()
-	{
-		{ // constructors, equality
-			static int i[] = { 0, 1, 2 };
-			auto ii = ptr(i);
-			assert(ii);
-			assert(*ii == 0);
-			auto i2(ii);
-			assert(i2);
-			assert(ii == i2);
-			auto i3 = i2;
-			assert(i3);
-			assert(!(i3 != i2));
-		}
-		{ // begin, end
-			int i[] = { 0, 1, 2 };
-			auto ii = ptr(i);
-			assert(ii == ii.begin());
-			assert(!ii.end());
-			int j = 0;
-			for (const auto& k : ii) {
-				assert(k == i[j++]);
-				if (j == 3) {
-					break;
-				}
-			}
-		}
-		{ // op bool, op*, op++, op++(int)
-			int i[] = { 0, 1, 2 };
-			auto ii = ptr(i);
-			assert(ii);
-			assert(*ii == 0);
-			++ii;
-			assert(*ii == 1);
-			assert(*ii++ == 1);
-			assert(*ii == 2);
-		}
+public:
+    using value_type = T;
 
-		return 0;
-	}
-#endif // _DEBUG
-	
-	// Half open interval [b, e)
-	template<class I>
-	class span {
-		I b, e;
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = typename std::iterator_traits<I>::value_type;
-		using difference_type = typename std::iterator_traits<I>::difference_type;
-		using pointer = typename std::iterator_traits<I>::pointer;
-		using reference = typename std::iterator_traits<I>::reference;
+    template <input I>
+    vector(I i)
+        : n(0)
+    {
+        while (i) {
+            v.push_back(*i);
+            ++i;
+        }
+    }
+    template <class II>
+    vector(II first, II last)
+        : v(first, last)
+        , n(0)
+    {
+    }
+    // E.g., vector({1,2,3})
+    vector(const std::initializer_list<T>& v)
+        : v(v)
+    {
+    }
+    vector(const vector&) = default;
+    vector& operator=(const vector&) = default;
+    vector(vector&&) = default;
+    vector& operator=(vector&&) = default;
+    ~vector() = default;
 
-		span(I b, I e)
-			: b(b), e(e)
-		{ }
-		span(I b, size_t n)
-			: b(b), e(std::next(b, n))
-		{ }
-		template<size_t N>
-		span(value_type(&a)[N])
-			: b(a), e(a + N)
-		{ }
+    // Strong equality.
+    bool operator==(const vector& _v) const { return n == _v.n && &v == &_v.v; }
 
-		bool operator==(const span& s) const
-		{
-			return b == s.b && e == s.e;
-		}
+    bool op_bool() const override { return n < v.size(); }
+    T op_star() const override { return v[n]; }
+    vector& op_incr() override
+    {
+        if (op_bool()) {
+            ++n;
+        }
 
-		span begin() const noexcept
-		{
-			return *this;
-		}
-		span end() const noexcept
-		{
-			return span(e, e);
-		}
+        return *this;
+    }
 
-		explicit operator bool() const noexcept
-		{
-			return b != e;
-		}
-		value_type operator*() const noexcept
-		{
-			return *b;
-		}
-		reference operator*() noexcept
-		{
-			return *b;
-		}
-		span& operator++() noexcept
-		{
-			if (operator bool()) {
-				++b;
-			}
+    // Multi-pass
+    vector& set(std::size_t _n = 0)
+    {
+        n = _n;
 
-			return *this;
-		}
-		span operator++(int) noexcept
-		{
-			auto tmp = *this;
+        return *this;
+    }
 
-			operator++();
+    // std::vector member function forwarding
+    vector& push_back(const T& t)
+    {
+        v.push_back(t);
 
-			return tmp;
-		}
-	};
+        return *this;
+    }
+    vector& push_back(T&& t)
+    {
+        v.push_back(t);
 
-	template<class I>
-	inline span<I> take(size_t n, I i)
-	{
-		return span(i, std::next(i, n));
-	}
-	template<class I>
-	inline I drop(size_t n, I i)
-	{
-		return std::next(i, n);
-	}
-#ifdef _DEBUG
-	inline int span_test()
-	{
-		{
-			int i[] = { 0, 1, 2 };
-			span ii(i, i + 3);
-			assert(ii);
-			assert(!(ii != ii));
-			assert(3 == count(ii));
-			span i2(i, 3);
-			assert(compare(ii, i2) == 0);
-			assert(equal(ii, i2));
-		}
+        return *this;
+    }
+    template <class... Args>
+    vector& emplace_back(Args&&... args)
+    {
+        v.emplace_back(args...);
 
-		return 0;
-	}
-#endif // _DEBUG
+        return *this;
+    }
+};
 
-#if 0
-	// End when predicate is true.
-	template<forward I, class P>
-	class upto {
-		I i;
-		P p;
-	};
+// Constant iterable: {c, c, c, ...}
+template <class T>
+class constant : public interface<T> {
+    T c;
 
-	// Iterable of iterables based on separator.
-	template<forward I, class T = typename I::value_type>
-	class split {
-		I i;
-		T t;
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = I;
-		//using difference_type = typename std::iterator_traits<I>::difference_type;
-		//using pointer = typename std::iterator_traits<I>::pointer;
-		//using reference = typename std::iterator_traits<I>::reference;
-		
-		split(I i, T t)
-			: i(i), t(t)
-		{ }
+public:
+    constant(T c) noexcept
+        : c(c)
+    {
+    }
 
-		bool operator==(const split&) const = default;
+    bool operator==(const constant& _c) const //= default;
+    {
+        return c == _c.c;
+    }
 
-		split begin() const noexcept
-		{
-			return *this;
-		}
-		split end() const noexcept
-		{
-			return split(i.end(), t);
-		}
+    bool op_bool() const noexcept override { return true; }
+    T op_star() const noexcept override { return c; }
+    constant& op_incr() noexcept override { return *this; }
+};
 
-		explicit operator bool() const noexcept
-		{
-			return i;
-		}
-		value_type operator*() const noexcept
-		{
-			return i;
-		}
-		split& operator++() noexcept
-		{
-			if (operator bool()) {
-				while (i and *i == t) {
-					++i;
-				}
-				if (i) {
-					auto j = i;
-					while (j and *j != t) {
-						++j;
-					}
-					i = j;
-				}
-			}
+// t, t + 1, t + 2, ...
+template <class T>
+class iota : public interface<T> {
+    T t;
 
-			return *this;
-		}
-	};
-#endif // 0
+public:
+    iota(T t = 0) noexcept
+        : t(t)
+    {
+    }
+
+    bool operator==(const iota& i) const { return t == i.t; }
+
+    bool op_bool() const noexcept override { return true; }
+    T op_star() const noexcept override { return t; }
+    iota& op_incr() noexcept override
+    {
+        ++t;
+
+        return *this;
+    }
+};
+
+// tn, tn*t, tn*t*t, ...
+template <class T>
+class power : public interface<T> {
+    T t, tn;
+
+public:
+    power(T t, T tn = 1)
+        : t(t)
+        , tn(tn)
+    {
+    }
+
+    bool operator==(const power& p) const { return t == p.t && tn == p.tn; }
+
+    bool op_bool() const override { return true; }
+    T op_star() const override { return tn; }
+    power& op_incr() override
+    {
+        tn *= t;
+
+        return *this;
+    }
+};
+
+// 1, 1, 2, 6, 24, ...
+template <class T = double>
+class factorial : public interface<T> {
+    T t, n;
+
+public:
+    factorial(T t = 1)
+        : t(t)
+        , n(1)
+    {
+    }
+
+    bool operator==(const factorial& f) const //= default;
+    {
+        return t == f.t && n == f.n;
+    }
+
+    bool op_bool() const override { return true; }
+    T op_star() const override { return t; }
+    factorial& op_incr() override
+    {
+        t *= n++;
+
+        return *this;
+    }
+};
+
+// 1, n, n*(n-1)/2, ..., 1
+template <class T = std::size_t>
+class choose : public interface<T> {
+    T n, k, nk;
+
+public:
+    choose(T n)
+        : n(n)
+        , k(0)
+        , nk(1)
+    {
+    }
+
+    bool operator==(const choose& c) const = default;
+
+    bool op_bool() const override { return k <= n; }
+    T op_star() const override { return nk; }
+    choose& op_incr() override
+    {
+        if (k <= n) {
+            nk *= n - k;
+            ++k;
+            nk /= k;
+        }
+
+        return *this;
+    }
+};
+
+// Unsafe pointer interface.
+template <class T>
+class pointer : public interface<T> {
+    T* p;
+
+public:
+    using value_type = T;
+
+    // pointer() is empty iterator
+    pointer(T* p = nullptr) noexcept
+        : p(p)
+    {
+    }
+
+    bool operator==(const pointer& _p) const //= default;
+    {
+        return p == _p.p;
+    }
+
+    bool op_bool() const noexcept override
+    {
+        return p != nullptr; // unsafe
+    }
+    value_type op_star() const noexcept override { return *p; }
+    pointer& op_incr() noexcept override
+    {
+        ++p;
+
+        return *this;
+    }
+};
+
+// Terminate on 0 value.
+template <class T>
+class null_terminated_pointer : public interface<T> {
+    T* p;
+
+public:
+    null_terminated_pointer(T* p) noexcept
+        : p(p)
+    {
+    }
+
+    bool operator==(const null_terminated_pointer& _p) const //= default;
+    {
+        return p == _p.p;
+    }
+
+    bool op_bool() const override { return *p != 0; }
+    T op_star() const override { return *p; }
+    null_terminated_pointer& op_incr() override
+    {
+        if (op_bool())
+            ++p;
+
+        return *this;
+    }
+};
+
+// Iterable having exactly one element. {t}
+template <class T>
+class once : public interface<T> {
+    T t;
+    bool b;
+
+public:
+    once(T t) noexcept
+        : t(t)
+        , b(true)
+    {
+    }
+
+    bool operator==(const once& o) const //= default;
+    {
+        return t == o.t && b == o.b;
+    }
+
+    bool op_bool() const noexcept override { return b; }
+    T op_star() const noexcept override { return t; }
+    once& op_incr() noexcept override
+    {
+        b = false;
+
+        return *this;
+    }
+};
+
+// Take at most n elements.
+template <input I, class T = I::value_type>
+class take : public interface<T> {
+    I i;
+    std::size_t n;
+
+public:
+    using value_type = T;
+
+    take(const I& i, std::size_t n)
+        : i(i)
+        , n(n)
+    {
+    }
+
+    bool operator==(const take& t) const //= default;
+    {
+        return i == t.i && n == t.n;
+    }
+
+    bool op_bool() const noexcept override { return i && n > 0; }
+    value_type op_star() const noexcept override { return *i; }
+    take& op_incr() noexcept override
+    {
+        if (n) {
+            ++i;
+            --n;
+        }
+
+        return *this;
+    }
+};
+
+// Assumes lifetime of a[N].
+template <class T, std::size_t N>
+inline auto
+array(T (&a)[N]) noexcept
+{
+    return take(pointer<T>(a), N);
+}
+
+// i0 then i1
+template <input I0,
+    input I1,
+    class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+class concatenate : public interface<T> {
+    I0 i0;
+    I1 i1;
+
+public:
+    concatenate(const I0& i0, const I1& i1)
+        : i0(i0)
+        , i1(i1)
+    {
+    }
+
+    bool operator==(const concatenate& i) const //= default;
+    {
+        return i0 == i.i0 && i1 == i.i1;
+    }
+
+    bool op_bool() const override { return i0 || i1; }
+    T op_star() const override { return i0 ? *i0 : *i1; }
+    concatenate& op_incr() override
+    {
+        if (i0) {
+            ++i0;
+        } else {
+            ++i1;
+        }
+
+        return *this;
+    }
+};
+
+// sorted i0 and i1 in order
+template <input I0,
+    input I1,
+    class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+class merge : public interface<T> {
+    I0 i0;
+    I1 i1;
+
+public:
+    merge(const I0& i0, const I1& i1)
+        : i0(i0)
+        , i1(i1)
+    {
+    }
+
+    bool operator==(const merge& i) const //= default;
+    {
+        return i0 == i.i0 && i1 == i.i1;
+    }
+
+    bool op_bool() const override { return i0 || i1; }
+    T op_star() const override
+    {
+        if (i0 && i1) {
+            if (*i0 < *i1) {
+                return *i0;
+            } else if (*i1 < *i0) {
+                return *i1;
+            } else {
+                return *i0 + *i1;
+            }
+        }
+
+        return i0 ? *i0 : *i1;
+    }
+    merge& op_incr() override
+    {
+        if (i0 && i1) {
+            if (*i0 < *i1) {
+                ++i0;
+            } else if (*i1 < *i0) {
+                ++i1;
+            } else {
+                ++i0;
+                ++i1;
+            }
+        } else {
+            if (i0) {
+                ++i0;
+            } else if (i1) {
+                ++i1;
+            }
+        }
+
+        return *this;
+    }
+};
+
+// {f(), f(), f(), ...}
+template <class F, class T = std::invoke_result_t<F>>
+class call : public interface<T> {
+    const F& f;
+
+public:
+    call(const F& f)
+        : f(f)
+    {
+    }
+
+    bool operator==(const call& c) const { return f == c.f; }
+
+    bool op_bool() const override { return true; }
+    T op_star() const override { return f(); }
+    call& op_incr() override { return *this; }
+};
+
+// Apply a function to elements of an iterable.
+// f(*i), f(*++i), f(*++i), ...
+template <class F,
+    input I,
+    class T = typename I::value_type,
+    class U = std::invoke_result_t<F, T>>
+class apply : public interface<U> {
+    const F& f;
+    I i;
+
+public:
+    using value_type = U;
+
+    apply(const F& f, const I& i)
+        : f(f)
+        , i(i)
+    {
+    }
+    apply(const apply& a)
+        : f(a.f)
+        , i(a.i)
+    {
+    }
+    apply& operator=(const apply& a)
+    {
+        if (this != &a) {
+            // f = a.f;
+            i = a.i;
+        }
+
+        return *this;
+    }
+    ~apply() { }
+
+    bool operator==(const apply& a) const { return f == a.f && i == a.i; }
+
+    bool op_bool() const override { return i.op_bool(); }
+    U op_star() const override { return f(*i); }
+    apply& op_incr() override
+    {
+        ++i;
+
+        return *this;
+    }
+};
+
+// TODO: apply(f, *i0, *i1, ...), apply(f, {*++i0, *++i1, ...}), ...
+
+// Apply a binary operation to elements of two iterable.
+template <class BinOp,
+    input I0,
+    input I1,
+    class T0 = typename I0::value_type,
+    class T1 = typename I1::value_type,
+    class T = std::invoke_result_t<BinOp, T0, T1>>
+class binop : public interface<T> {
+    const BinOp& op;
+    I0 i0;
+    I1 i1;
+
+public:
+    binop(const BinOp& op, I0 i0, I1 i1)
+        : op(op)
+        , i0(i0)
+        , i1(i1)
+    {
+    }
+    binop(const binop& o)
+        : op(o.op)
+        , i0(o.i0)
+        , i1(o.i1)
+    {
+    }
+    binop& operator=(const binop& o)
+    {
+        if (this != &o) {
+            i0 = o.i0;
+            i1 = o.i1;
+        }
+
+        return *this;
+    }
+    ~binop() { }
+
+    bool operator==(const binop& o) const
+    {
+        return op == o.op && i0 == o.i0 && i1 == o.i1;
+    }
+
+    bool op_bool() const override { return i0 && i1; }
+    T op_star() const override { return op(*i0, *i1); }
+    binop& op_incr() override
+    {
+        ++i0;
+        ++i1;
+
+        return *this;
+    }
+};
+
+// Elements satisfying predicate.
+template <class P, input I, class T = typename I::value_type>
+class filter : public interface<T> {
+    const P& p;
+    I i;
+    void incr()
+    {
+        while (i && ++i && !p(*i)) {
+            ;
+        }
+    }
+
+public:
+    filter(const P& p, const I& i)
+        : p(p)
+        , i(i)
+    {
+        incr();
+    }
+    filter(const filter& a)
+        : p(a.p)
+        , i(a.i)
+    {
+    }
+    filter& operator=(const filter& a)
+    {
+        if (this != &a) {
+            i = a.i;
+        }
+
+        return *this;
+    }
+    ~filter() { }
+
+    bool operator==(const filter& a) const { return p == a.p and i == a.i; }
+
+    bool op_bool() const override { return i.op_bool(); }
+    T op_star() const override { return *i; }
+    filter& op_incr() override
+    {
+        incr();
+
+        return *this;
+    }
+};
+
+// Stop at first element satisfying predicate.
+template <class P, input I, class T = typename I::value_type>
+class until : public interface<T> {
+    const P& p;
+    I i;
+
+public:
+    until(const P& p, const I& i)
+        : p(p)
+        , i(i)
+    {
+    }
+    until(const until& a)
+        : p(a.p)
+        , i(a.i)
+    {
+    }
+    until& operator=(const until& a)
+    {
+        if (this != &a) {
+            i = a.i;
+        }
+
+        return *this;
+    }
+    ~until() { }
+
+    bool operator==(const until& a) const { return p == a.p and i == a.i; }
+
+    bool op_bool() const override { return i && !p(*i); }
+    T op_star() const override { return *i; }
+    until& op_incr() override
+    {
+        ++i;
+
+        return *this;
+    }
+};
+
+// Right fold: t, op(t, *i), op(op(t, *i), *++i), ...
+template <class BinOp, input I, class T = typename I::value_type>
+class fold : public interface<T> {
+    const BinOp& op;
+    I i;
+    T t;
+
+public:
+    fold(const BinOp& op, const I& i, T t = 0)
+        : op(op)
+        , i(i)
+        , t(t)
+    {
+    }
+    fold(const fold& f)
+        : op(f.op)
+        , i(f.i)
+        , t(f.t)
+    {
+    }
+    fold& operator=(const fold& f)
+    {
+        if (this != &f) {
+            i = f.i;
+            t = f.t;
+        }
+
+        return *this;
+    }
+    ~fold() { }
+
+    bool operator==(const fold& f) const
+    {
+        return i == f.i && t == f.t; // BinOp is part of type
+    }
+
+    bool op_bool() const override { return i.op_bool(); }
+    T op_star() const override { return t; }
+    fold& op_incr() override
+    {
+        if (i) {
+            t = op(t, *i);
+            ++i;
+        }
+
+        return *this;
+    }
+};
+template <input I, class T = typename I::value_type>
+inline auto
+sum(I i, T t = 0)
+{
+    while (i) {
+        t += *i;
+        ++i;
+    }
+
+    return t;
+}
+template <input I, class T = typename I::value_type>
+inline auto
+prod(I i, T t = 1)
+{
+    while (i) {
+        t *= *i;
+        ++i;
+    }
+
+    return t;
+}
+// inline auto horner(I i, T x, T t = 1)
+
+// d(i[1], i[0]), d(i[2], i[1]), ...
+template <input I,
+    class T = typename I::value_type,
+    class D = std::minus<T>,
+    typename U = std::invoke_result_t<D, T, T>>
+class delta : public interface<U> {
+    const D& d;
+    I i;
+    T t, _t;
+
+public:
+    using value_type = U;
+
+    delta(const I& _i, const D& _d = std::minus<T> {})
+        : d(_d)
+        , i(_i)
+        , t {}
+        , _t {}
+    {
+        if (i) {
+            t = *i;
+            ++i;
+            _t = i ? *i : t;
+        }
+    }
+    delta(const delta& _d)
+        : d(_d.d)
+        , i(_d.i)
+        , t(_d.t)
+        , _t(_d._t)
+    {
+    }
+    delta& operator=(const delta& _d)
+    {
+        if (this != &_d) {
+            i = _d.i;
+            t = _d.t;
+            _t = _d._t;
+        }
+
+        return *this;
+    }
+    ~delta() { }
+
+    bool operator==(const delta& _d) const
+    {
+        return i == _d.i && t == _d.t && _t == _d._t;
+    }
+
+    bool op_bool() const override { return i.op_bool(); }
+    U op_star() const override { return d(*i, t); }
+    delta& op_incr() override
+    {
+        if (i) {
+            t = *i;
+            ++i;
+        }
+
+        return *this;
+    }
+};
+
+// reversed delta d(i[0]], i[1]), d(i[1], i[2]), ...
+template <input I,
+    class T = typename I::value_type,
+    class D = std::minus<T>,
+    typename U = std::invoke_result_t<D, T, T>>
+class nabla : public interface<U> {
+    const D& d;
+    I i;
+    T t, _t;
+
+public:
+    using value_type = U;
+
+    nabla(const I& _i, const D& _d = std::minus<T> {})
+        : d(_d)
+        , i(_i)
+    {
+        if (i) {
+            t = *i;
+            ++i;
+            // i.op_bool() ???
+            _t = i ? *i : t;
+        }
+    }
+    nabla(const nabla& _d)
+        : d(_d.d)
+        , i(_d.i)
+        , t(_d.t)
+        , _t(_d._t)
+    {
+    }
+    nabla& operator=(const nabla& _d)
+    {
+        if (this != &_d) {
+            i = _d.i;
+            t = _d.t;
+            _t = _d._t;
+        }
+
+        return *this;
+    }
+    ~nabla() { }
+
+    bool operator==(const nabla& _d) const
+    {
+        return i == _d.i && t == _d.t && _t == _d._t;
+    }
+
+    bool op_bool() const override { return i.op_bool(); }
+    U op_star() const override { return d(t, *i); }
+    nabla& op_incr() override
+    {
+        if (i) {
+            t = *i;
+            ++i;
+        }
+
+        return *this;
+    }
+};
+
+// uptick + downtick = delta
+template <input I, class T = typename I::value_type>
+inline auto
+uptick(I i)
+{
+    return delta(i, [](T a, T b) { return std::max<T>(b - a, 0); });
+}
+template <input I, class T = typename I::value_type>
+inline auto
+downtick(I i)
+{
+    return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
+}
+
 } // namespace fms::iterable
+
+#define FMS_ITERABLE_OPERATOR(X) \
+    X(+, std::plus<T> {})        \
+    X(-, std::minus<T> {})       \
+    X(*, std::multiplies<T> {})  \
+    X(/, std::divides<T> {})     \
+    X(%, std::modulus<T> {})
+
+#define FMS_ITERABLE_OPERATOR_FUNCTION(OP, OP_)              \
+    template <fms::iterable::input I,                        \
+        fms::iterable::input J,                              \
+        class T = std::common_type_t<typename I::value_type, \
+            typename J::value_type>>                         \
+    inline auto operator OP(const I& i, const J& j)          \
+    {                                                        \
+        return fms::iterable::binop(OP_, i, j);              \
+    }
+
+FMS_ITERABLE_OPERATOR(FMS_ITERABLE_OPERATOR_FUNCTION)
+#undef FMS_ITERABLE_OPERATOR_FUNCTION
+
+template <fms::iterable::input I, fms::iterable::input J>
+inline auto operator,(const I& i, const J& j)
+{
+    return fms::iterable::concatenate(i, j);
+}
+
+/*
+#define FMS_ITERABLE_RELATION(X) \
+        X(==, std::equal_to<T>{}) \
+        X(!=, std::not_equal_to<T>{}) \
+        X(<, std::less<T>{}) \
+        X(<=, std::less_equal<T>{}) \
+        X(>, std::greater<T>{}) \
+        X(>=, std::greater_equal<T>{}) \
+
+#define FMS_ITERABLE_RELATION_INLINE(a, b) \
+template<fms::iterable::input I, class T = typename I::value_type> \
+inline auto operator a(const I& i, T t) { return fms::iterable::filter([t](T u)
+{ return u a t; }, i); } #undef FMS_ITERABLE_RELATION_INLINE
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator==(const I& i, T t) { return fms::iterable::filter([t](T u)
+{ return u == t; }, i); } template<fms::iterable::input I, class T = typename
+I::value_type> inline auto operator!=(const I& i, T t) { return
+fms::iterable::filter([t](T u) { return u != t; }, i); }
+*/
+template <fms::iterable::input I, class T = typename I::value_type>
+inline auto
+operator<(const I& i, T t)
+{
+    return fms::iterable::filter([t](T u) { return u < t; }, i);
+}
+template <fms::iterable::input I, class T = typename I::value_type>
+inline auto
+operator<=(const I& i, T t)
+{
+    return fms::iterable::filter([t](T u) { return u <= t; }, i);
+}
+template <fms::iterable::input I, class T = typename I::value_type>
+inline auto
+operator>(const I& i, T t)
+{
+    return fms::iterable::filter([t](T u) { return u > t; }, i);
+}
+template <fms::iterable::input I, class T = typename I::value_type>
+inline auto
+operator>=(const I& i, T t)
+{
+    return fms::iterable::filter([t](T u) { return u >= t; }, i);
+}

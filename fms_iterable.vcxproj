@@ -158,7 +158,7 @@
     <ClInclude Include="fms_iterable.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="fms_iterable.cpp" />
+    <ClCompile Include="fms_iterable.t.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

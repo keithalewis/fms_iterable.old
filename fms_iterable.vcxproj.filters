@@ -20,7 +20,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="fms_iterable.cpp">
+    <ClCompile Include="fms_iterable.t.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
