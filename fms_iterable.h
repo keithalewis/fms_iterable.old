@@ -148,38 +148,34 @@ namespace fms::iterable {
 		return i;
 	}
 
-	// Make STL container iterable. Assumes lifetime of c.
-	template <class C, class T = typename C::value_type>
-	class container : public interface<T> {
-		const C& c;
-		typename C::const_iterator i;
-
+	// Make STL container iterable. Assumes lifetime of container.
+	template <std::input_iterator I, class T = typename I::value_type>
+	class interval : public interface<T> {
+		I b, e;
 	public:
 		using value_type = T;
 
-		container(const C& _c)
-			: c(_c)
-			, i(c.begin())
-		{
-		}
+		interval(I b, I e)
+			: b(b), e(e)
+		{ }
 
-		auto begin() const { return c.begin(); }
-		auto end() const { return c.end(); }
+		auto begin() const { return b; }
+		auto end() const { return e; }
 
 		// strong equality
-		bool operator==(const container& _c) const
+		bool operator==(const interval& i) const
 		{
-			return &c == &_c.c && i == _c.i;
+			return b == i.b && e == i.e;
 		}
 
 		// TODO: size() ???
 
-		bool op_bool() const override { return i != c.end(); }
-		value_type op_star() const override { return *i; }
-		container& op_incr() override
+		bool op_bool() const override { return b != e; }
+		value_type op_star() const override { return *b; }
+		interval& op_incr() override
 		{
 			if (op_bool()) {
-				++i;
+				++b;
 			}
 
 			return *this;
@@ -190,7 +186,6 @@ namespace fms::iterable {
 	template <class T>
 	class list : public interface<T> {
 		std::list<T> l;
-
 	public:
 		using value_type = T;
 

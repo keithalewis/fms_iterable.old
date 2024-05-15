@@ -8,10 +8,10 @@
 
 using namespace fms::iterable;
 
-int test_container = []() {
+int test_interval = []() {
     {
         std::vector v { 1, 2, 3 };
-        container c(v);
+        interval c(v.begin(), v.end());
         auto c2(c);
         assert(c == c2);
         // c = c2; // cannot reseat const reference
@@ -29,7 +29,7 @@ int test_container = []() {
     }
     {
         std::vector v { 1, 2, 3 };
-        container c(v);
+        interval c(v.begin(), v.end());
         int i = 1;
         for (auto ci : c) {
             assert(i == ci);
@@ -38,7 +38,7 @@ int test_container = []() {
     }
     {
         std::vector v { 1, 2, 3 };
-        container c(v);
+        interval c(v.begin(), v.end());
         assert(equal(c, take(iota(1), 3)));
     }
 
