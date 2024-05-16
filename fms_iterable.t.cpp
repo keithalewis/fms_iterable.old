@@ -41,6 +41,11 @@ int test_interval = []() {
         interval c(v.begin(), v.end());
         assert(equal(c, take(iota(1), 3)));
     }
+    {
+        std::vector v{ 1, 2, 3 };
+        auto c = make_interval(v);
+        assert(equal(c, take(iota(1), 3)));
+    }
 
     return 0;
 }();

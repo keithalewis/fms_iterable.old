@@ -181,6 +181,11 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
+	template<class C>
+	inline auto make_interval(C& c)
+	{
+		return interval(c.begin(), c.end());
+	}
 
 	// Value class.
 	template <class T>
