@@ -437,11 +437,8 @@ namespace fms::iterable {
 		using value_type = T;
 
 		choose(T n)
-			: n(n)
-			, k(0)
-			, nk(1)
-		{
-		}
+			: n(n), k(0), nk(1)
+		{ }
 
 		bool operator==(const choose& c) const = default;
 
@@ -463,7 +460,6 @@ namespace fms::iterable {
 	template <class T>
 	class pointer : public interface<T> {
 		T* p;
-
 	public:
 		using value_type = T;
 
@@ -501,8 +497,7 @@ namespace fms::iterable {
 
 		null_terminated_pointer(T* p) noexcept
 			: p(p)
-		{
-		}
+		{ }
 
 		bool operator==(const null_terminated_pointer& _p) const //= default;
 		{
@@ -525,15 +520,12 @@ namespace fms::iterable {
 	class once : public interface<T> {
 		T t;
 		bool b;
-
 	public:
 		using value_type = T;
 
 		once(T t) noexcept
-			: t(t)
-			, b(true)
-		{
-		}
+			: t(t), b(true)
+		{ }
 
 		bool operator==(const once& o) const //= default;
 		{
@@ -555,13 +547,11 @@ namespace fms::iterable {
 	class take : public interface<T> {
 		I i;
 		std::size_t n;
-
 	public:
 		using value_type = T;
 
 		take(const I& i, std::size_t n)
-			: i(i)
-			, n(n)
+			: i(i), n(n)
 		{
 		}
 
@@ -585,127 +575,115 @@ namespace fms::iterable {
 
 	// Assumes lifetime of a[N].
 	template <class T, std::size_t N>
-	inline auto
-		array(T(&a)[N]) noexcept
+	inline auto array(T(&a)[N]) noexcept
 	{
 		return take(pointer<T>(a), N);
 	}
 
 	// i0 then i1
-	template <input I0,
-		input I1,
-		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-		class concatenate : public interface<T> {
+	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	class concatenate : public interface<T> {
 		I0 i0;
 		I1 i1;
+	public:
+		using value_type = T;
 
-		public:
-			using value_type = T;
+		concatenate(const I0& i0, const I1& i1)
+			: i0(i0), i1(i1)
+		{ }
 
-			concatenate(const I0& i0, const I1& i1)
-				: i0(i0)
-				, i1(i1)
-			{
+		bool operator==(const concatenate& i) const //= default;
+		{
+			return i0 == i.i0 && i1 == i.i1;
+		}
+
+		bool op_bool() const override { return i0 || i1; }
+		value_type op_star() const override { return i0 ? *i0 : *i1; }
+		concatenate& op_incr() override
+		{
+			if (i0) {
+				++i0;
+			}
+			else {
+				++i1;
 			}
 
-			bool operator==(const concatenate& i) const //= default;
-			{
-				return i0 == i.i0 && i1 == i.i1;
-			}
-
-			bool op_bool() const override { return i0 || i1; }
-			value_type op_star() const override { return i0 ? *i0 : *i1; }
-			concatenate& op_incr() override
-			{
-				if (i0) {
-					++i0;
-				}
-				else {
-					++i1;
-				}
-
-				return *this;
-			}
+			return *this;
+		}
 	};
 
 	// Sorted i0 and i1 in order. Equivalent elements are repeated.
-	template <input I0,
-		input I1,
-		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-		class merge : public interface<T> {
+	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	class merge : public interface<T> {
 		I0 i0;
 		I1 i1;
 
-		public:
-			using value_type = T;
+	public:
+		using value_type = T;
 
-			merge(const I0& i0, const I1& i1)
-				: i0(i0)
-				, i1(i1)
-			{
-			}
+		merge(const I0& i0, const I1& i1)
+			: i0(i0), i1(i1)
+		{ }
 
-			bool operator==(const merge& i) const //= default;
-			{
-				return i0 == i.i0 && i1 == i.i1;
-			}
+		bool operator==(const merge& i) const //= default;
+		{
+			return i0 == i.i0 && i1 == i.i1;
+		}
 
-			bool op_bool() const override { return i0 || i1; }
-			value_type op_star() const override
-			{
-				if (i0 && i1) {
-					if (*i0 < *i1) {
-						return *i0;
-					}
-					else if (*i1 < *i0) {
-						return *i1;
-					}
-					else {
-						return *i0;
-					}
+		bool op_bool() const override { return i0 || i1; }
+		value_type op_star() const override
+		{
+			if (i0 && i1) {
+				if (*i0 < *i1) {
+					return *i0;
 				}
-
-				return i0 ? *i0 : *i1;
-			}
-			merge& op_incr() override
-			{
-				if (i0 && i1) {
-					if (*i0 < *i1) {
-						++i0;
-					}
-					else if (*i1 < *i0) {
-						++i1;
-					}
-					else {
-						++i0;
-						std::swap(i0, i1);
-					}
+				else if (*i1 < *i0) {
+					return *i1;
 				}
 				else {
-					if (i0) {
-						++i0;
-					}
-					else if (i1) {
-						++i1;
-					}
+					return *i0;
 				}
-
-				return *this;
 			}
+
+			return i0 ? *i0 : *i1;
+		}
+		merge& op_incr() override
+		{
+			if (i0 && i1) {
+				if (*i0 < *i1) {
+					++i0;
+				}
+				else if (*i1 < *i0) {
+					++i1;
+				}
+				else {
+					++i0;
+					std::swap(i0, i1);
+				}
+			}
+			else {
+				if (i0) {
+					++i0;
+				}
+				else if (i1) {
+					++i1;
+				}
+			}
+
+			return *this;
+		}
 	};
 
-	// {f(), f(), f(), ...}
+	// f(), ...
 	template <class F, class T = std::invoke_result_t<F>>
 	class call : public interface<T> {
 		const F& f;
-
 	public:
 		using value_type = T;
 
 		call(const F& f)
 			: f(f)
-		{
-		}
+		{ }
 
 		bool operator==(const call& c) const { return f == c.f; }
 
@@ -716,104 +694,93 @@ namespace fms::iterable {
 
 	// Apply a function to elements of an iterable.
 	// f(*i), f(*++i), f(*++i), ...
-	template <class F,
-		input I,
-		class T = typename I::value_type,
-		class U = std::invoke_result_t<F, T>>
-		class apply : public interface<U> {
+	template <class F, input I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
+	class apply : public interface<U> {
 		const F& f;
 		I i;
+	public:
+		using value_type = U;
 
-		public:
-			using value_type = U;
-
-			apply(const F& f, const I& i)
-				: f(f)
-				, i(i)
-			{
+		apply(const F& f, const I& i)
+			: f(f), i(i)
+		{ }
+		apply(const apply& a)
+			: f(a.f), i(a.i)
+		{ }
+		apply& operator=(const apply& a)
+		{
+			if (this != &a) {
+				// f = a.f;
+				i = a.i;
 			}
-			apply(const apply& a)
-				: f(a.f)
-				, i(a.i)
-			{
-			}
-			apply& operator=(const apply& a)
-			{
-				if (this != &a) {
-					// f = a.f;
-					i = a.i;
-				}
 
-				return *this;
-			}
-			~apply() { }
+			return *this;
+		}
+		~apply() { }
 
-			bool operator==(const apply& a) const { return f == a.f && i == a.i; }
+		bool operator==(const apply& a) const
+		{
+			return f == a.f && i == a.i;
+		}
 
-			bool op_bool() const override { return i.op_bool(); }
-			value_type op_star() const override { return f(*i); }
-			apply& op_incr() override
-			{
-				++i;
+		bool op_bool() const override { return i.op_bool(); }
+		value_type op_star() const override { return f(*i); }
+		apply& op_incr() override
+		{
+			++i;
 
-				return *this;
-			}
+			return *this;
+		}
 	};
 
 	// TODO: apply(f, *i0, *i1, ...), apply(f, {*++i0, *++i1, ...}), ...
 
 	// Apply a binary operation to elements of two iterable.
-	template <class BinOp,
-		input I0,
-		input I1,
-		class T0 = typename I0::value_type,
-		class T1 = typename I1::value_type,
-		class T = std::invoke_result_t<BinOp, T0, T1>>
-		class binop : public interface<T> {
+	template <class BinOp, input I0, input I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type, class T = std::invoke_result_t<BinOp, T0, T1>>
+	class binop : public interface<T> {
 		const BinOp& op;
 		I0 i0;
 		I1 i1;
+	public:
+		using value_type = T;
 
-		public:
-			using value_type = T;
-
-			binop(const BinOp& op, I0 i0, I1 i1)
-				: op(op)
-				, i0(i0)
-				, i1(i1)
-			{
-			}
-			binop(const binop& o)
-				: op(o.op)
-				, i0(o.i0)
-				, i1(o.i1)
-			{
-			}
-			binop& operator=(const binop& o)
-			{
-				if (this != &o) {
-					i0 = o.i0;
-					i1 = o.i1;
-				}
-
-				return *this;
-			}
-			~binop() { }
-
-			bool operator==(const binop& o) const
-			{
-				return op == o.op && i0 == o.i0 && i1 == o.i1;
+		binop(const BinOp& op, I0 i0, I1 i1)
+			: op(op), i0(i0), i1(i1)
+		{ }
+		binop(const binop& o)
+			: op(o.op), i0(o.i0), i1(o.i1)
+		{ }
+		binop& operator=(const binop& o)
+		{
+			if (this != &o) {
+				i0 = o.i0;
+				i1 = o.i1;
 			}
 
-			bool op_bool() const override { return i0 && i1; }
-			value_type op_star() const override { return op(*i0, *i1); }
-			binop& op_incr() override
-			{
-				++i0;
-				++i1;
+			return *this;
+		}
+		~binop() { }
 
-				return *this;
-			}
+		bool operator==(const binop& o) const
+		{
+			return op == o.op && i0 == o.i0 && i1 == o.i1;
+		}
+
+		bool op_bool() const override
+		{
+			return i0 && i1;
+		}
+		value_type op_star() const override
+		{
+			return op(*i0, *i1);
+		}
+		binop& op_incr() override
+		{
+			++i0;
+			++i1;
+
+			return *this;
+		}
 	};
 
 	// Elements satisfying predicate.
@@ -821,27 +788,24 @@ namespace fms::iterable {
 	class filter : public interface<T> {
 		const P& p;
 		I i;
+
 		void incr()
 		{
 			while (i && ++i && !p(*i)) {
 				;
 			}
 		}
-
 	public:
 		using value_type = T;
 
 		filter(const P& p, const I& i)
-			: p(p)
-			, i(i)
+			: p(p), i(i)
 		{
 			incr();
 		}
 		filter(const filter& a)
-			: p(a.p)
-			, i(a.i)
-		{
-		}
+			: p(a.p), i(a.i)
+		{ }
 		filter& operator=(const filter& a)
 		{
 			if (this != &a) {
@@ -850,12 +814,22 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		~filter() { }
+		~filter()
+		{ }
 
-		bool operator==(const filter& a) const { return p == a.p and i == a.i; }
+		bool operator==(const filter& a) const
+		{
+			return p == a.p and i == a.i;
+		}
 
-		bool op_bool() const override { return i.op_bool(); }
-		value_type op_star() const override { return *i; }
+		bool op_bool() const override
+		{
+			return i.op_bool();
+		}
+		value_type op_star() const override
+		{
+			return *i;
+		}
 		filter& op_incr() override
 		{
 			incr();
@@ -869,20 +843,15 @@ namespace fms::iterable {
 	class until : public interface<T> {
 		const P& p;
 		I i;
-
 	public:
 		using value_type = T;
 
 		until(const P& p, const I& i)
-			: p(p)
-			, i(i)
-		{
-		}
+			: p(p), i(i)
+		{ }
 		until(const until& a)
-			: p(a.p)
-			, i(a.i)
-		{
-		}
+			: p(a.p), i(a.i)
+		{ }
 		until& operator=(const until& a)
 		{
 			if (this != &a) {
@@ -891,12 +860,22 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		~until() { }
+		~until()
+		{ }
 
-		bool operator==(const until& a) const { return p == a.p and i == a.i; }
+		bool operator==(const until& a) const
+		{
+			return p == a.p and i == a.i;
+		}
 
-		bool op_bool() const override { return i && !p(*i); }
-		value_type op_star() const override { return *i; }
+		bool op_bool() const override
+		{
+			return i && !p(*i);
+		}
+		value_type op_star() const override
+		{
+			return *i;
+		}
 		until& op_incr() override
 		{
 			++i;
@@ -911,22 +890,15 @@ namespace fms::iterable {
 		const BinOp& op;
 		I i;
 		T t;
-
 	public:
 		using value_type = T;
 
 		fold(const BinOp& op, const I& i, T t = 0)
-			: op(op)
-			, i(i)
-			, t(t)
-		{
-		}
+			: op(op), i(i), t(t)
+		{ }
 		fold(const fold& f)
-			: op(f.op)
-			, i(f.i)
-			, t(f.t)
-		{
-		}
+			: op(f.op), i(f.i), t(f.t)
+		{ }
 		fold& operator=(const fold& f)
 		{
 			if (this != &f) {
@@ -943,8 +915,14 @@ namespace fms::iterable {
 			return i == f.i && t == f.t; // BinOp is part of type
 		}
 
-		bool op_bool() const override { return i.op_bool(); }
-		value_type op_star() const override { return t; }
+		bool op_bool() const override
+		{
+			return i.op_bool();
+		}
+		value_type op_star() const override
+		{
+			return t;
+		}
 		fold& op_incr() override
 		{
 			if (i) {
@@ -956,8 +934,7 @@ namespace fms::iterable {
 		}
 	};
 	template <input I, class T = typename I::value_type>
-	inline auto
-		sum(I i, T t = 0)
+	inline auto sum(I i, T t = 0)
 	{
 		while (i) {
 			t += *i;
@@ -967,8 +944,7 @@ namespace fms::iterable {
 		return t;
 	}
 	template <input I, class T = typename I::value_type>
-	inline auto
-		prod(I i, T t = 1)
+	inline auto prod(I i, T t = 1)
 	{
 		while (i) {
 			t *= *i;
@@ -980,77 +956,72 @@ namespace fms::iterable {
 	// inline auto horner(I i, T x, T t = 1)
 
 	// d(i[1], i[0]), d(i[2], i[1]), ...
-	template <input I,
-		class T = typename I::value_type,
-		class D = std::minus<T>,
-		typename U = std::invoke_result_t<D, T, T>>
-		class delta : public interface<U> {
+	template <input I, class T = typename I::value_type, class D = std::minus<T>, typename U = std::invoke_result_t<D, T, T>>
+	class delta : public interface<U> {
 		const D& d;
 		I i;
 		T t, _t;
 
-		public:
-			using value_type = U;
+	public:
+		using value_type = U;
 
-			delta(const I& _i, const D& _d = std::minus<T>{})
-				: d(_d)
-				, i(_i)
-				, t{}
-				, _t{}
-			{
-				if (i) {
-					t = *i;
-					++i;
-					_t = i ? *i : t;
-				}
+		delta(const I& _i, const D& _d = std::minus<T>{})
+			: d(_d), i(_i), t{}, _t{}
+		{
+			if (i) {
+				t = *i;
+				++i;
+				_t = i ? *i : t;
 			}
-			delta(const delta& _d)
-				: d(_d.d)
-				, i(_d.i)
-				, t(_d.t)
-				, _t(_d._t)
-			{
-			}
-			delta& operator=(const delta& _d)
-			{
-				if (this != &_d) {
-					i = _d.i;
-					t = _d.t;
-					_t = _d._t;
-				}
-
-				return *this;
-			}
-			~delta() { }
-
-			bool operator==(const delta& _d) const
-			{
-				return i == _d.i && t == _d.t && _t == _d._t;
+		}
+		delta(const delta& _d)
+			: d(_d.d), i(_d.i), t(_d.t), _t(_d._t)
+		{ }
+		delta& operator=(const delta& _d)
+		{
+			if (this != &_d) {
+				i = _d.i;
+				t = _d.t;
+				_t = _d._t;
 			}
 
-			bool op_bool() const override { return i.op_bool(); }
-			value_type op_star() const override { return d(*i, t); }
-			delta& op_incr() override
-			{
-				if (i) {
-					t = *i;
-					++i;
-				}
+			return *this;
+		}
+		~delta()
+		{ }
 
-				return *this;
+		bool operator==(const delta& _d) const
+		{
+			return i == _d.i && t == _d.t && _t == _d._t;
+		}
+
+		bool op_bool() const override
+		{
+			return i.op_bool();
+		}
+		value_type op_star() const override
+		{
+			return d(*i, t);
+		}
+		delta& op_incr() override
+		{
+			if (i) {
+				t = *i;
+				++i;
 			}
+
+			return *this;
+		}
 	};
 
 	// uptick + downtick = delta
 	template <input I, class T = typename I::value_type>
-	inline auto
-		uptick(I i)
+	inline auto uptick(I i)
 	{
 		return delta(i, [](T a, T b) { return std::max<T>(b - a, 0); });
 	}
 	template <input I, class T = typename I::value_type>
-	inline auto
-		downtick(I i)
+	inline auto downtick(I i)
 	{
 		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
 	}

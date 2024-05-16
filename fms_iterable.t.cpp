@@ -481,6 +481,12 @@ int test_merge = []() {
         auto c = merge(array(i), array(j));
         assert(equal(c, list({ 1, 2, 2, 3 })));
     }
+    {
+        int i[] = { 1, 2, 2 };
+        int j[] = { 2, 2, 3 };
+        auto c = merge(array(i), array(j));
+        assert(equal(c, list({ 1, 2, 2, 2, 2, 3 })));
+    }
 
     return 0;
 }();
@@ -531,14 +537,12 @@ int test_delta = []() {
 
 int test_exp = []() {
     {
-        /*
     double x = 1;
     const auto eps = [](double x) { return x + 1 == 1; };
     // exponential(x) = sum x^n/n!
     auto expx = sum(until(eps, power(x) / factorial()));
     double exp1 = std::exp(1.);
-    assert(std::fabs(expx - exp1) <= 2 * tmx::math::epsilon<double>);
-    */
+    assert(std::fabs(expx - exp1) <= 5e-16);
     }
 
     return 0;
