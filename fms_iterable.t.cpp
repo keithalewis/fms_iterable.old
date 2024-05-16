@@ -499,25 +499,31 @@ int test_merge = []() {
 int test_vector = []() {
     {
         int i[] = { 1, 2, 3 };
-        auto p = array(i);
-        auto c = vector<int>(p);
-        assert(c);
-        
-        assert(*c == 1);
-        ++c;
-        assert(c);
-        assert(*c == 2);
-        ++c;
-        assert(*c == 3);
-        ++c;
-        assert(!c);
+        {
+            auto p = array(i);
+            auto c = vector<int>(p);
+            assert(c);
 
-        auto cc = vector(c);
-        assert(equal(cc, c));
+            assert(*c == 1);
+            ++c;
+            assert(c);
+            assert(*c == 2);
+            ++c;
+            assert(*c == 3);
+            ++c;
+            assert(!c);
 
-        vector ccc(cc);
-        assert(equal(ccc, c));
-        
+            auto cc = vector(c);
+            assert(equal(cc, c));
+
+            vector ccc(cc);
+            assert(equal(ccc, c));
+        }
+        {
+            auto c = vector(3, i);
+            assert(equal(c, take(iota(1), 3)));
+        }
+
     }
 
     return 0;

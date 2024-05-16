@@ -33,15 +33,11 @@ namespace fms::iterable {
 
 	template <class I>
 	concept has_back = requires(I i) {
-		{
-			i.back()
-		} -> std::same_as<I>;
+		{ i.back() } -> std::same_as<I>;
 	};
 	template <class I>
 	concept has_end = requires(I i) {
-		{
-			i.end()
-		} -> std::same_as<I>;
+		{ i.end() } -> std::same_as<I>;
 	};
 
 	// non-virtual interface for input iterable.
@@ -67,8 +63,7 @@ namespace fms::iterable {
 
 	// All elements equal.
 	template <input I, input J>
-	inline bool
-		equal(I i, J j) noexcept
+	inline bool equal(I i, J j) noexcept
 	{
 		while (i && j) {
 			if (*i != *j) {
@@ -83,8 +78,7 @@ namespace fms::iterable {
 
 	// length(i, length(j)) = length(i) + length(j)
 	template <input I>
-	inline std::size_t
-		length(I i, std::size_t n = 0) noexcept
+	inline std::size_t length(I i, std::size_t n = 0) noexcept
 	{
 		while (i) {
 			++i;
@@ -96,8 +90,7 @@ namespace fms::iterable {
 
 	// Drop at most n from the beginning.
 	template <input I>
-	inline I
-		drop(I i, std::size_t n) noexcept
+	inline I drop(I i, std::size_t n) noexcept
 	{
 		while (i && n) {
 			++i;
@@ -109,8 +102,7 @@ namespace fms::iterable {
 
 	// Last element of iterable.
 	template <input I>
-	inline I
-		back(I i)
+	inline I back(I i)
 	{
 		if constexpr (has_back<I>) {
 			return i.back();
@@ -127,15 +119,13 @@ namespace fms::iterable {
 
 	// For use with STL
 	template <class I>
-	inline I
-		begin(I i)
+	inline I begin(I i)
 	{
 		return i;
 	}
 	// ++back(i)
 	template <input I>
-	inline I
-		end(I i)
+	inline I end(I i)
 	{
 		if constexpr (has_end<I>) {
 			return i.end();
@@ -159,8 +149,14 @@ namespace fms::iterable {
 			: b(b), e(e)
 		{ }
 
-		auto begin() const { return b; }
-		auto end() const { return e; }
+		auto begin() const
+		{
+			return b;
+		}
+		auto end() const
+		{
+			return e;
+		}
 
 		// strong equality
 		bool operator==(const interval& i) const
@@ -170,8 +166,14 @@ namespace fms::iterable {
 
 		// TODO: size() ???
 
-		bool op_bool() const override { return b != e; }
-		value_type op_star() const override { return *b; }
+		bool op_bool() const override
+		{
+			return b != e;
+		}
+		value_type op_star() const override
+		{
+			return *b;
+		}
 		interval& op_incr() override
 		{
 			if (op_bool()) {
@@ -181,7 +183,7 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
-	template<class C>
+	template<class C> // container
 	inline auto make_interval(C& c)
 	{
 		return interval(c.begin(), c.end());
@@ -216,8 +218,14 @@ namespace fms::iterable {
 		// same list
 		bool operator==(const list& _l) const { return &l == &_l.l; }
 
-		bool op_bool() const override { return !l.empty(); }
-		value_type op_star() const override { return l.front(); }
+		bool op_bool() const override
+		{
+			return !l.empty();
+		}
+		value_type op_star() const override
+		{
+			return l.front();
+		}
 		list& op_incr() override
 		{
 			if (op_bool()) {
@@ -255,10 +263,10 @@ namespace fms::iterable {
 	class vector : public interface<T> {
 		std::vector<T> v;
 		std::size_t n;
-
 	public:
 		using value_type = T;
 
+		// Cache iterable values.
 		template <input I>
 		vector(I i)
 			: n(0)
@@ -268,17 +276,13 @@ namespace fms::iterable {
 				++i;
 			}
 		}
-		template <class II>
-		vector(II first, II last)
-			: v(first, last)
-			, n(0)
-		{
-		}
+		vector(std::size_t n, const T* pt)
+			: v(pt, pt + n), n(0)
+		{ }
 		// E.g., vector({1,2,3})
 		vector(const std::initializer_list<T>& v)
-			: v(v)
-		{
-		}
+			: v(v), n(0)
+		{ }
 		vector(const vector&) = default;
 		vector& operator=(const vector&) = default;
 		vector(vector&&) = default;
@@ -288,8 +292,14 @@ namespace fms::iterable {
 		// Strong equality.
 		bool operator==(const vector& _v) const { return n == _v.n && &v == &_v.v; }
 
-		bool op_bool() const override { return n < v.size(); }
-		T op_star() const override { return v[n]; }
+		bool op_bool() const override
+		{
+			return n < v.size();
+		}
+		T op_star() const override
+		{
+			return v[n];
+		}
 		vector& op_incr() override
 		{
 			if (op_bool()) {
@@ -340,17 +350,25 @@ namespace fms::iterable {
 
 		constant(T c) noexcept
 			: c(c)
-		{
-		}
+		{ }
 
 		bool operator==(const constant& _c) const //= default;
 		{
 			return c == _c.c;
 		}
 
-		bool op_bool() const noexcept override { return true; }
-		value_type op_star() const noexcept override { return c; }
-		constant& op_incr() noexcept override { return *this; }
+		bool op_bool() const noexcept override
+		{
+			return true;
+		}
+		value_type op_star() const noexcept override
+		{
+			return c;
+		}
+		constant& op_incr() noexcept override
+		{
+			return *this;
+		}
 	};
 
 	// t, t + 1, t + 2, ...
@@ -363,8 +381,7 @@ namespace fms::iterable {
 
 		iota(T t = 0) noexcept
 			: t(t)
-		{
-		}
+		{ }
 
 		bool operator==(const iota& i) const { return t == i.t; }
 
@@ -387,15 +404,19 @@ namespace fms::iterable {
 		using value_type = T;
 
 		power(T t, T tn = 1)
-			: t(t)
-			, tn(tn)
-		{
-		}
+			: t(t), tn(tn)
+		{ }
 
 		bool operator==(const power& p) const { return t == p.t && tn == p.tn; }
 
-		bool op_bool() const override { return true; }
-		value_type op_star() const override { return tn; }
+		bool op_bool() const override
+		{
+			return true;
+		}
+		value_type op_star() const override
+		{
+			return tn;
+		}
 		power& op_incr() override
 		{
 			tn *= t;
@@ -413,18 +434,22 @@ namespace fms::iterable {
 		using value_type = T;
 
 		factorial(T t = 1)
-			: t(t)
-			, n(1)
-		{
-		}
+			: t(t), n(1)
+		{ }
 
 		bool operator==(const factorial& f) const //= default;
 		{
 			return t == f.t && n == f.n;
 		}
 
-		bool op_bool() const override { return true; }
-		value_type op_star() const override { return t; }
+		bool op_bool() const override
+		{
+			return true;
+		}
+		value_type op_star() const override
+		{
+			return t;
+		}
 		factorial& op_incr() override
 		{
 			t *= n++;
@@ -447,8 +472,14 @@ namespace fms::iterable {
 
 		bool operator==(const choose& c) const = default;
 
-		bool op_bool() const override { return k <= n; }
-		value_type op_star() const override { return nk; }
+		bool op_bool() const override
+		{
+			return k <= n;
+		}
+		value_type op_star() const override
+		{
+			return nk;
+		}
 		choose& op_incr() override
 		{
 			if (k <= n) {
@@ -471,8 +502,7 @@ namespace fms::iterable {
 		// pointer() is empty iterator
 		pointer(T* p = nullptr) noexcept
 			: p(p)
-		{
-		}
+		{ }
 
 		bool operator==(const pointer& _p) const //= default;
 		{
@@ -483,7 +513,10 @@ namespace fms::iterable {
 		{
 			return p != nullptr; // unsafe
 		}
-		value_type op_star() const noexcept override { return *p; }
+		value_type op_star() const noexcept override
+		{
+			return *p;
+		}
 		pointer& op_incr() noexcept override
 		{
 			++p;
@@ -509,8 +542,14 @@ namespace fms::iterable {
 			return p == _p.p;
 		}
 
-		bool op_bool() const override { return *p != 0; }
-		value_type op_star() const override { return *p; }
+		bool op_bool() const override
+		{
+			return *p != 0;
+		}
+		value_type op_star() const override
+		{
+			return *p;
+		}
 		null_terminated_pointer& op_incr() override
 		{
 			if (op_bool())
@@ -537,8 +576,14 @@ namespace fms::iterable {
 			return t == o.t && b == o.b;
 		}
 
-		bool op_bool() const noexcept override { return b; }
-		value_type op_star() const noexcept override { return t; }
+		bool op_bool() const noexcept override
+		{
+			return b;
+		}
+		value_type op_star() const noexcept override
+		{
+			return t;
+		}
 		once& op_incr() noexcept override
 		{
 			b = false;
@@ -557,16 +602,21 @@ namespace fms::iterable {
 
 		take(const I& i, std::size_t n)
 			: i(i), n(n)
-		{
-		}
+		{ }
 
 		bool operator==(const take& t) const //= default;
 		{
 			return i == t.i && n == t.n;
 		}
 
-		bool op_bool() const noexcept override { return i && n > 0; }
-		value_type op_star() const noexcept override { return *i; }
+		bool op_bool() const noexcept override
+		{
+			return i && n > 0;
+		}
+		value_type op_star() const noexcept override
+		{
+			return *i;
+		}
 		take& op_incr() noexcept override
 		{
 			if (n) {
@@ -602,8 +652,14 @@ namespace fms::iterable {
 			return i0 == i.i0 && i1 == i.i1;
 		}
 
-		bool op_bool() const override { return i0 || i1; }
-		value_type op_star() const override { return i0 ? *i0 : *i1; }
+		bool op_bool() const override
+		{
+			return i0 || i1;
+		}
+		value_type op_star() const override
+		{
+			return i0 ? *i0 : *i1;
+		}
 		concatenate& op_incr() override
 		{
 			if (i0) {
@@ -635,7 +691,10 @@ namespace fms::iterable {
 			return i0 == i.i0 && i1 == i.i1;
 		}
 
-		bool op_bool() const override { return i0 || i1; }
+		bool op_bool() const override
+		{
+			return i0 || i1;
+		}
 		value_type op_star() const override
 		{
 			if (i0 && i1) {
@@ -692,9 +751,18 @@ namespace fms::iterable {
 
 		bool operator==(const call& c) const { return f == c.f; }
 
-		bool op_bool() const override { return true; }
-		value_type op_star() const override { return f(); }
-		call& op_incr() override { return *this; }
+		bool op_bool() const override
+		{
+			return true;
+		}
+		value_type op_star() const override
+		{
+			return f();
+		}
+		call& op_incr() override
+		{
+			return *this;
+		}
 	};
 
 	// Apply a function to elements of an iterable.
@@ -728,8 +796,14 @@ namespace fms::iterable {
 			return f == a.f && i == a.i;
 		}
 
-		bool op_bool() const override { return i.op_bool(); }
-		value_type op_star() const override { return f(*i); }
+		bool op_bool() const override
+		{
+			return i.op_bool();
+		}
+		value_type op_star() const override
+		{
+			return f(*i);
+		}
 		apply& op_incr() override
 		{
 			++i;
