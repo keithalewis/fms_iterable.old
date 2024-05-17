@@ -1,8 +1,10 @@
 // fms_iterable.h - iterator with operator bool() const to detect the end
 #pragma once
+#include <execution>
 #include <functional>
 #include <initializer_list>
 #include <list>
+#include <numeric>
 #include <type_traits>
 #include <vector>
 
@@ -47,9 +49,18 @@ namespace fms::iterable {
 
 		virtual ~interface() {};
 
-		explicit operator bool() const { return op_bool(); }
-		T operator*() const { return op_star(); }
-		interface& operator++() { return op_incr(); }
+		explicit operator bool() const 
+		{ 
+			return op_bool(); 
+		}
+		T operator*() const 
+		{
+			return op_star();
+		}
+		interface& operator++() 
+		{ 
+			return op_incr();
+		}
 
 	private:
 		virtual bool op_bool() const = 0;
@@ -138,6 +149,17 @@ namespace fms::iterable {
 		return i;
 	}
 
+	/*
+	struct add_postfix_increment {
+		template <typename Self>
+		auto operator++(this Self && self, int) {
+			auto tmp = self;
+			++self;
+			return tmp;
+		}
+	};
+	*/
+
 	// Make STL container iterable. Assumes lifetime of container.
 	template <std::input_iterator I, class T = typename I::value_type>
 	class interval : public interface<T> {
@@ -182,6 +204,16 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		/*
+		interval operator++(int)
+		{
+			auto i = *this;
+
+			op_incr();
+
+			return i;
+		}
+		*/
 	};
 	template<class C> // container
 	inline auto make_interval(C& c)
@@ -262,57 +294,78 @@ namespace fms::iterable {
 	template <class T>
 	class vector : public interface<T> {
 		std::vector<T> v;
-		std::size_t n;
+		std::vector<T>::const_iterator vi;
 	public:
 		using value_type = T;
 
 		// Cache iterable values.
 		template <input I>
 		vector(I i)
-			: n(0)
 		{
 			while (i) {
 				v.push_back(*i);
 				++i;
 			}
+			vi = v.begin();
 		}
 		vector(std::size_t n, const T* pt)
-			: v(pt, pt + n), n(0)
+			: v(pt, pt + n), vi(v.begin())
 		{ }
 		// E.g., vector({1,2,3})
-		vector(const std::initializer_list<T>& v)
-			: v(v), n(0)
+		vector(const std::initializer_list<T>& i)
+			: v(i), vi(v.begin())
 		{ }
-		vector(const vector&) = default;
-		vector& operator=(const vector&) = default;
-		vector(vector&&) = default;
-		vector& operator=(vector&&) = default;
-		~vector() = default;
+		vector(const vector& v_)
+			: v(v_.v), vi(v.begin())
+		{ }
+		vector& operator=(const vector& v_)
+		{
+			if (this != &v_) {
+				v = v_.v;
+				vi = v.begin();
+			}
+
+			return *this;
+		}
+		~vector()
+		{ }
+
+		auto begin() const
+		{
+			return v.begin();
+		}
+		auto end() const
+		{
+			return v.end();
+		}
 
 		// Strong equality.
-		bool operator==(const vector& _v) const { return n == _v.n && &v == &_v.v; }
+		bool operator==(const vector& _v) const 
+		{
+			return vi == _v.vi && &v == &_v.v; 
+		}
 
 		bool op_bool() const override
 		{
-			return n < v.size();
+			return vi != v.end();
 		}
 		T op_star() const override
 		{
-			return v[n];
+			return *vi;
 		}
 		vector& op_incr() override
 		{
 			if (op_bool()) {
-				++n;
+				++vi;
 			}
 
 			return *this;
 		}
 
 		// Multi-pass
-		vector& reset(std::size_t _n = 0)
+		vector& reset()
 		{
-			n = _n;
+			vi = v.begin();
 
 			return *this;
 		}
@@ -749,7 +802,10 @@ namespace fms::iterable {
 			: f(f)
 		{ }
 
-		bool operator==(const call& c) const { return f == c.f; }
+		bool operator==(const call& c) const 
+		{
+			return f == c.f; 
+		}
 
 		bool op_bool() const override
 		{
@@ -789,7 +845,8 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		~apply() { }
+		~apply() 
+		{ }
 
 		bool operator==(const apply& a) const
 		{
@@ -1022,6 +1079,12 @@ namespace fms::iterable {
 
 		return t;
 	}
+	template <class E, input I, class T = typename I::value_type>
+	inline auto sum(I i, T t = 0, E e = std::execution::seq)
+	{
+		return std::reduce(e, begin(i), end(i), t);
+	}
+
 	template <input I, class T = typename I::value_type>
 	inline auto prod(I i, T t = 1)
 	{

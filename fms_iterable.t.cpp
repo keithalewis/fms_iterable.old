@@ -1,4 +1,5 @@
 // fms_iterable.t.cpp - test fms::iterable
+#include "fms_time.h"
 #include "fms_iterable.h"
 #include <cassert>
 #include <cmath>
@@ -504,6 +505,13 @@ int test_vector = []() {
             auto c = vector<int>(p);
             assert(c);
 
+            auto cc = vector(c);
+            assert(cc);
+            assert(equal(cc, c));
+
+            vector ccc(cc);
+            assert(equal(ccc, c));
+
             assert(*c == 1);
             ++c;
             assert(c);
@@ -513,12 +521,7 @@ int test_vector = []() {
             ++c;
             assert(!c);
 
-            auto cc = vector(c);
-            assert(equal(cc, c));
-
-            vector ccc(cc);
-            assert(equal(ccc, c));
-        }
+       }
         {
             auto c = vector(3, i);
             assert(equal(c, take(iota(1), 3)));
@@ -547,13 +550,19 @@ int test_delta = []() {
 }();
 
 int test_exp = []() {
-    {
-    double x = 1;
     const auto eps = [](double x) { return x + 1 == 1; };
-    // exponential(x) = sum x^n/n!
-    auto expx = sum(until(eps, power(x) / factorial()));
-    double exp1 = std::exp(1.);
-    assert(std::fabs(expx - exp1) <= 5e-16);
+    double x = 1;
+    {
+// exponential(x) = sum x^n/n!
+        auto expx = sum(until(eps, power(x) / factorial()));
+        double exp1 = std::exp(1.);
+        assert(std::fabs(expx - exp1) <= 5e-16);
+    }
+    {
+        auto expx = until(eps, power(x) / factorial());
+        auto t = fms::time([&]() { sum(expx); }, 10000);
+        //t = fms::time([&]() { sum(expx, 0, std::execution::seq); });
+        t = t;
     }
 
     return 0;
