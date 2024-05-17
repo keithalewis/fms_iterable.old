@@ -239,13 +239,7 @@ namespace fms::iterable {
 		// E.g., list({1,2,3})
 		list(const std::initializer_list<T>& l)
 			: l(l)
-		{
-		}
-		list(const list&) = default;
-		list& operator=(const list&) = default;
-		list(list&&) = default;
-		list& operator=(list&&) = default;
-		~list() = default;
+		{ }
 
 		// same list
 		bool operator==(const list& _l) const { return &l == &_l.l; }
@@ -726,7 +720,7 @@ namespace fms::iterable {
 		}
 	};
 
-	// Sorted i0 and i1 in order. Equivalent elements are repeated.
+	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
 	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
 	class merge : public interface<T> {
 		I0 i0;
