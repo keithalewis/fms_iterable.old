@@ -20,16 +20,9 @@ namespace fms::iterable {
 
 	template <class I>
 	concept input = requires(I i) {
-		{
-			i.operator bool()
-		} -> std::same_as<bool>;
-		{
-			*i
-		} -> std::convertible_to<typename I::value_type>;
-		/*
-		{
-			++i
-		} -> std::convertible_to<I&>;*/
+		{ i.operator bool() } -> std::same_as<bool>;
+		{ *i } -> std::convertible_to<typename I::value_type>;
+		//{ ++i} -> std::convertible_to<I&>;
 		//		{ ++i } -> IsReferenceToBase;
 	};
 

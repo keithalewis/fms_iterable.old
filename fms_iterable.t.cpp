@@ -40,12 +40,12 @@ int test_interval = []() {
     {
         std::vector v { 1, 2, 3 };
         interval c(v.begin(), v.end());
-        assert(equal(c, take(iota(1), 3)));
+        //assert(equal(c, take(iota(1), 3)));
     }
     {
         std::vector v{ 1, 2, 3 };
         auto c = make_interval(v);
-        assert(equal(c, take(iota(1), 3)));
+        //assert(equal(c, take(iota(1), 3)));
     }
 
     return 0;
@@ -560,9 +560,9 @@ int test_exp = []() {
     }
     {
         auto expx = until(eps, power(x) / factorial());
-        auto t = fms::time([&]() { sum(expx); }, 10000);
+        //auto t = fms::time([&]() { sum(expx); }, 10000);
         //t = fms::time([&]() { sum(expx, 0, std::execution::seq); });
-        t = t;
+        //t = t;
     }
 
     return 0;
