@@ -10,55 +10,29 @@
 
 namespace fms::iterable {
 
-	/* TODO: concepts
-	template<class T> struct interface;
-
-	template <typename I>
-	concept IsReferenceToBase = std::is_base_of_v<fms::iterable::interface<typename
-	I::value_type>, std::remove_reference_t<I>>;
-	*/
 
 	template <class I>
 	concept input = requires(I i) {
+		//typename I::iterator_concept;
+		typename I::iterator_category;
+		typename I::value_type;
 		{ i.operator bool() } -> std::same_as<bool>;
-		{ *i } -> std::convertible_to<typename I::value_type>;
-		//{ ++i} -> std::convertible_to<I&>;
+		{ i.operator *() } -> std::convertible_to<typename I::value_type>;
+		{ i.operator++() } -> std::same_as<I&>;
 		//		{ ++i } -> IsReferenceToBase;
 	};
 
 	template <class I>
-	concept has_back = requires(I i) {
-		{ i.back() } -> std::same_as<I>;
+	concept has_begin = requires(I i) {
+		{ i.begin() } -> std::same_as<I>;
 	};
 	template <class I>
 	concept has_end = requires(I i) {
 		{ i.end() } -> std::same_as<I>;
 	};
-
-	// non-virtual interface for input iterable.
-	template <class T>
-	struct interface {
-		using value_type = T;
-
-		virtual ~interface() {};
-
-		explicit operator bool() const 
-		{ 
-			return op_bool(); 
-		}
-		T operator*() const 
-		{
-			return op_star();
-		}
-		interface& operator++() 
-		{ 
-			return op_incr();
-		}
-
-	private:
-		virtual bool op_bool() const = 0;
-		virtual T op_star() const = 0;
-		virtual interface& op_incr() = 0;
+	template <class I>
+	concept has_back = requires(I i) {
+		{ i.back() } -> std::same_as<I>;
 	};
 
 	//
@@ -125,6 +99,10 @@ namespace fms::iterable {
 	template <class I>
 	inline I begin(I i)
 	{
+		if constexpr (has_begin<I>) {
+			return i.begin();
+		}
+
 		return i;
 	}
 	// ++back(i)
@@ -155,9 +133,10 @@ namespace fms::iterable {
 
 	// Make STL container iterable. Assumes lifetime of container.
 	template <std::input_iterator I, class T = typename I::value_type>
-	class interval : public interface<T> {
+	class interval  {
 		I b, e;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		interval(I b, I e)
@@ -181,17 +160,17 @@ namespace fms::iterable {
 
 		// TODO: size() ???
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return b != e;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return *b;
 		}
-		interval& op_incr() override
+		interval& operator++()
 		{
-			if (op_bool()) {
+			if (operator bool()) {
 				++b;
 			}
 
@@ -202,7 +181,7 @@ namespace fms::iterable {
 		{
 			auto i = *this;
 
-			op_incr();
+			operator++();
 
 			return i;
 		}
@@ -216,9 +195,10 @@ namespace fms::iterable {
 
 	// Value class.
 	template <class T>
-	class list : public interface<T> {
+	class list {
 		std::list<T> l;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		template <input I>
@@ -237,17 +217,17 @@ namespace fms::iterable {
 		// same list
 		bool operator==(const list& _l) const { return &l == &_l.l; }
 
-		bool op_bool() const override
+		explicit operator bool() const //override
 		{
 			return !l.empty();
 		}
-		value_type op_star() const override
+		value_type operator*() const //override
 		{
 			return l.front();
 		}
-		list& op_incr() override
+		list& operator++() //override
 		{
-			if (op_bool()) {
+			if (operator bool()) {
 				l.pop_front();
 			}
 
@@ -279,10 +259,11 @@ namespace fms::iterable {
 
 	// Value class.
 	template <class T>
-	class vector : public interface<T> {
+	class vector {
 		std::vector<T> v;
 		std::vector<T>::const_iterator vi;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		// Cache iterable values.
@@ -332,17 +313,17 @@ namespace fms::iterable {
 			return vi == _v.vi && &v == &_v.v; 
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return vi != v.end();
 		}
-		T op_star() const override
+		T operator*() const
 		{
 			return *vi;
 		}
-		vector& op_incr() override
+		vector& operator++()
 		{
-			if (op_bool()) {
+			if (operator bool()) {
 				++vi;
 			}
 
@@ -382,10 +363,11 @@ namespace fms::iterable {
 
 	// Constant iterable: {c, c, c, ...}
 	template <class T>
-	class constant : public interface<T> {
+	class constant {
 		T c;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		constant(T c) noexcept
@@ -397,15 +379,15 @@ namespace fms::iterable {
 			return c == _c.c;
 		}
 
-		bool op_bool() const noexcept override
+		explicit operator bool() const noexcept
 		{
 			return true;
 		}
-		value_type op_star() const noexcept override
+		value_type operator*() const noexcept
 		{
 			return c;
 		}
-		constant& op_incr() noexcept override
+		constant& operator++() noexcept
 		{
 			return *this;
 		}
@@ -413,10 +395,11 @@ namespace fms::iterable {
 
 	// t, t + 1, t + 2, ...
 	template <class T>
-	class iota : public interface<T> {
+	class iota {
 		T t;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		iota(T t = 0) noexcept
@@ -425,9 +408,9 @@ namespace fms::iterable {
 
 		bool operator==(const iota& i) const { return t == i.t; }
 
-		bool op_bool() const noexcept override { return true; }
-		value_type op_star() const noexcept override { return t; }
-		iota& op_incr() noexcept override
+		explicit operator bool() const noexcept { return true; }
+		value_type operator*() const noexcept { return t; }
+		iota& operator++() noexcept
 		{
 			++t;
 
@@ -437,10 +420,11 @@ namespace fms::iterable {
 
 	// tn, tn*t, tn*t*t, ...
 	template <class T>
-	class power : public interface<T> {
+	class power {
 		T t, tn;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		power(T t, T tn = 1)
@@ -449,15 +433,15 @@ namespace fms::iterable {
 
 		bool operator==(const power& p) const { return t == p.t && tn == p.tn; }
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return true;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return tn;
 		}
-		power& op_incr() override
+		power& operator++()
 		{
 			tn *= t;
 
@@ -467,10 +451,11 @@ namespace fms::iterable {
 
 	// 1, 1, 2, 6, 24, ...
 	template <class T = double>
-	class factorial : public interface<T> {
+	class factorial {
 		T t, n;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		factorial(T t = 1)
@@ -482,15 +467,15 @@ namespace fms::iterable {
 			return t == f.t && n == f.n;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return true;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return t;
 		}
-		factorial& op_incr() override
+		factorial& operator++()
 		{
 			t *= n++;
 
@@ -500,10 +485,11 @@ namespace fms::iterable {
 
 	// 1, n, n*(n-1)/2, ..., 1
 	template <class T = std::size_t>
-	class choose : public interface<T> {
+	class choose {
 		T n, k, nk;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		choose(T n)
@@ -512,15 +498,15 @@ namespace fms::iterable {
 
 		bool operator==(const choose& c) const = default;
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return k <= n;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return nk;
 		}
-		choose& op_incr() override
+		choose& operator++()
 		{
 			if (k <= n) {
 				nk *= n - k;
@@ -534,9 +520,10 @@ namespace fms::iterable {
 
 	// Unsafe pointer interface.
 	template <class T>
-	class pointer : public interface<T> {
+	class pointer {
 		T* p;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		// pointer() is empty iterator
@@ -549,15 +536,15 @@ namespace fms::iterable {
 			return p == _p.p;
 		}
 
-		bool op_bool() const noexcept override
+		explicit operator bool() const noexcept
 		{
 			return p != nullptr; // unsafe
 		}
-		value_type op_star() const noexcept override
+		value_type operator*() const noexcept
 		{
 			return *p;
 		}
-		pointer& op_incr() noexcept override
+		pointer& operator++() noexcept
 		{
 			++p;
 
@@ -567,10 +554,11 @@ namespace fms::iterable {
 
 	// Terminate on 0 value.
 	template <class T>
-	class null_terminated_pointer : public interface<T> {
+	class null_terminated_pointer {
 		T* p;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		null_terminated_pointer(T* p) noexcept
@@ -582,17 +570,17 @@ namespace fms::iterable {
 			return p == _p.p;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return *p != 0;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return *p;
 		}
-		null_terminated_pointer& op_incr() override
+		null_terminated_pointer& operator++()
 		{
-			if (op_bool())
+			if (operator bool())
 				++p;
 
 			return *this;
@@ -601,10 +589,11 @@ namespace fms::iterable {
 
 	// Iterable having exactly one element. {t}
 	template <class T>
-	class once : public interface<T> {
+	class once {
 		T t;
 		bool b;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		once(T t) noexcept
@@ -616,15 +605,15 @@ namespace fms::iterable {
 			return t == o.t && b == o.b;
 		}
 
-		bool op_bool() const noexcept override
+		explicit operator bool() const noexcept
 		{
 			return b;
 		}
-		value_type op_star() const noexcept override
+		value_type operator*() const noexcept
 		{
 			return t;
 		}
-		once& op_incr() noexcept override
+		once& operator++() noexcept
 		{
 			b = false;
 
@@ -634,10 +623,11 @@ namespace fms::iterable {
 
 	// Take at most n elements.
 	template <input I, class T = I::value_type>
-	class take : public interface<T> {
+	class take {
 		I i;
 		std::size_t n;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		take(const I& i, std::size_t n)
@@ -649,15 +639,15 @@ namespace fms::iterable {
 			return i == t.i && n == t.n;
 		}
 
-		bool op_bool() const noexcept override
+		explicit operator bool() const noexcept
 		{
 			return i && n > 0;
 		}
-		value_type op_star() const noexcept override
+		value_type operator*() const noexcept
 		{
 			return *i;
 		}
-		take& op_incr() noexcept override
+		take& operator++() noexcept
 		{
 			if (n) {
 				++i;
@@ -677,10 +667,11 @@ namespace fms::iterable {
 
 	// i0 then i1
 	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-	class concatenate : public interface<T> {
+	class concatenate {
 		I0 i0;
 		I1 i1;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		concatenate(const I0& i0, const I1& i1)
@@ -692,15 +683,15 @@ namespace fms::iterable {
 			return i0 == i.i0 && i1 == i.i1;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return i0 || i1;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return i0 ? *i0 : *i1;
 		}
-		concatenate& op_incr() override
+		concatenate& operator++()
 		{
 			if (i0) {
 				++i0;
@@ -715,11 +706,12 @@ namespace fms::iterable {
 
 	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
 	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-	class merge : public interface<T> {
+	class merge {
 		I0 i0;
 		I1 i1;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		merge(const I0& i0, const I1& i1)
@@ -731,11 +723,11 @@ namespace fms::iterable {
 			return i0 == i.i0 && i1 == i.i1;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return i0 || i1;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			if (i0 && i1) {
 				if (*i0 < *i1) {
@@ -751,7 +743,7 @@ namespace fms::iterable {
 
 			return i0 ? *i0 : *i1;
 		}
-		merge& op_incr() override
+		merge& operator++()
 		{
 			if (i0 && i1) {
 				if (*i0 < *i1) {
@@ -780,9 +772,10 @@ namespace fms::iterable {
 
 	// f(), ...
 	template <class F, class T = std::invoke_result_t<F>>
-	class call : public interface<T> {
+	class call {
 		const F& f;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		call(const F& f)
@@ -794,15 +787,15 @@ namespace fms::iterable {
 			return f == c.f; 
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return true;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return f();
 		}
-		call& op_incr() override
+		call& operator++()
 		{
 			return *this;
 		}
@@ -811,10 +804,11 @@ namespace fms::iterable {
 	// Apply a function to elements of an iterable.
 	// f(*i), f(*++i), f(*++i), ...
 	template <class F, input I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
-	class apply : public interface<U> {
+	class apply {
 		const F& f;
 		I i;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
 
 		apply(const F& f, const I& i)
@@ -840,15 +834,15 @@ namespace fms::iterable {
 			return f == a.f && i == a.i;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
-			return i.op_bool();
+			return i.operator bool();
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return f(*i);
 		}
-		apply& op_incr() override
+		apply& operator++()
 		{
 			++i;
 
@@ -860,11 +854,12 @@ namespace fms::iterable {
 
 	// Apply a binary operation to elements of two iterable.
 	template <class BinOp, input I0, input I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type, class T = std::invoke_result_t<BinOp, T0, T1>>
-	class binop : public interface<T> {
+	class binop {
 		const BinOp& op;
 		I0 i0;
 		I1 i1;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		binop(const BinOp& op, I0 i0, I1 i1)
@@ -889,15 +884,15 @@ namespace fms::iterable {
 			return op == o.op && i0 == o.i0 && i1 == o.i1;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return i0 && i1;
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return op(*i0, *i1);
 		}
-		binop& op_incr() override
+		binop& operator++()
 		{
 			++i0;
 			++i1;
@@ -908,7 +903,7 @@ namespace fms::iterable {
 
 	// Elements satisfying predicate.
 	template <class P, input I, class T = typename I::value_type>
-	class filter : public interface<T> {
+	class filter {
 		const P& p;
 		I i;
 
@@ -919,6 +914,7 @@ namespace fms::iterable {
 			}
 		}
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		filter(const P& p, const I& i)
@@ -945,15 +941,15 @@ namespace fms::iterable {
 			return p == a.p and i == a.i;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
-			return i.op_bool();
+			return i.operator bool();
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return *i;
 		}
-		filter& op_incr() override
+		filter& operator++()
 		{
 			incr();
 
@@ -963,10 +959,11 @@ namespace fms::iterable {
 
 	// Stop at first element satisfying predicate.
 	template <class P, input I, class T = typename I::value_type>
-	class until : public interface<T> {
+	class until {
 		const P& p;
 		I i;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		until(const P& p, const I& i)
@@ -991,15 +988,15 @@ namespace fms::iterable {
 			return p == a.p and i == a.i;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
 			return i && !p(*i);
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return *i;
 		}
-		until& op_incr() override
+		until& operator++()
 		{
 			++i;
 
@@ -1009,11 +1006,12 @@ namespace fms::iterable {
 
 	// Right fold: t, op(t, *i), op(op(t, *i), *++i), ...
 	template <class BinOp, input I, class T = typename I::value_type>
-	class fold : public interface<T> {
+	class fold {
 		const BinOp& op;
 		I i;
 		T t;
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		fold(const BinOp& op, const I& i, T t = 0)
@@ -1038,15 +1036,15 @@ namespace fms::iterable {
 			return i == f.i && t == f.t; // BinOp is part of type
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
-			return i.op_bool();
+			return i.operator bool();
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return t;
 		}
-		fold& op_incr() override
+		fold& operator++()
 		{
 			if (i) {
 				t = op(t, *i);
@@ -1086,12 +1084,13 @@ namespace fms::iterable {
 
 	// d(i[1], i[0]), d(i[2], i[1]), ...
 	template <input I, class T = typename I::value_type, class D = std::minus<T>, typename U = std::invoke_result_t<D, T, T>>
-	class delta : public interface<U> {
+	class delta {
 		const D& d;
 		I i;
 		T t, _t;
 
 	public:
+		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
 
 		delta(const I& _i, const D& _d = std::minus<T>{})
@@ -1124,15 +1123,15 @@ namespace fms::iterable {
 			return i == _d.i && t == _d.t && _t == _d._t;
 		}
 
-		bool op_bool() const override
+		explicit operator bool() const
 		{
-			return i.op_bool();
+			return i.operator bool();
 		}
-		value_type op_star() const override
+		value_type operator*() const
 		{
 			return d(*i, t);
 		}
-		delta& op_incr() override
+		delta& operator++()
 		{
 			if (i) {
 				t = *i;
