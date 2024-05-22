@@ -745,6 +745,8 @@ namespace fms::iterable {
 		}
 		merge& operator++()
 		{
+			using std::swap;
+
 			if (i0 && i1) {
 				if (*i0 < *i1) {
 					++i0;
@@ -754,7 +756,7 @@ namespace fms::iterable {
 				}
 				else {
 					++i0;
-					std::swap(i0, i1);
+					swap(i0, i1);
 				}
 			}
 			else {
