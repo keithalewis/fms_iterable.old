@@ -40,12 +40,12 @@ int test_interval = []() {
     {
         std::vector v { 1, 2, 3 };
         interval c(v.begin(), v.end());
-        //assert(equal(c, take(iota(1), 3)));
+        assert(equal(c, take(iota(1), 3)));
     }
     {
         std::vector v{ 1, 2, 3 };
         auto c = make_interval(v);
-        //assert(equal(c, take(iota(1), 3)));
+        assert(equal(c, take(iota(1), 3)));
     }
 
     return 0;
@@ -502,10 +502,10 @@ int test_vector = []() {
         int i[] = { 1, 2, 3 };
         {
             auto p = array(i);
-            auto c = vector<int>(p);
+            auto c = make_vector(p);
             assert(c);
 
-            auto cc = vector(c);
+            auto cc = make_vector(c);
             assert(cc);
             assert(equal(cc, c));
 

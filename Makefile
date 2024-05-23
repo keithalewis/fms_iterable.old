@@ -12,4 +12,4 @@ check: $(SOURCES)
 	clang-tidy -checks=cert-* --warnings-as-errors=* $(SOURCES)
 
 clean:
-	-rm fms_iterable.t
+	-rm -f fms_iterable.t

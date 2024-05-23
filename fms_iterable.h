@@ -266,16 +266,8 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		// Cache iterable values.
-		template <input I>
-		vector(I i)
-		{
-			while (i) {
-				v.push_back(*i);
-				++i;
-			}
-			vi = v.begin();
-		}
+		vector()
+		{  }
 		vector(std::size_t n, const T* pt)
 			: v(pt, pt + n), vi(v.begin())
 		{ }
@@ -286,10 +278,22 @@ namespace fms::iterable {
 		vector(const vector& v_)
 			: v(v_.v), vi(v.begin())
 		{ }
+		vector(vector&& v_) noexcept
+			: v(std::move(v_.v)), vi(v.begin())
+		{ }
 		vector& operator=(const vector& v_)
 		{
 			if (this != &v_) {
 				v = v_.v;
+				vi = v.begin();
+			}
+
+			return *this;
+		}
+		vector& operator=(vector&& v_)
+		{
+			if (this != &v_) {
+				v = std::move(v_.v);
 				vi = v.begin();
 			}
 
@@ -360,6 +364,21 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
+	// Cache iterable values.
+	template <input I, class T = typename I::value_type>
+	inline auto make_vector(I i)
+	{
+		vector<T> v;
+
+		while (i) {
+			v.push_back(*i);
+			++i;
+		}
+		v.reset();
+
+		return v;
+	}
+
 
 	// Constant iterable: {c, c, c, ...}
 	template <class T>
