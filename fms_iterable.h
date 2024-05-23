@@ -262,40 +262,41 @@ namespace fms::iterable {
 	template <class T>
 	class vector {
 		std::vector<T> v;
-		std::vector<T>::const_iterator vi;
+		size_t i;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		vector()
+			: v{}, i(0)
 		{  }
 		vector(std::size_t n, const T* pt)
-			: v(pt, pt + n), vi(v.begin())
+			: v(pt, pt + n), i(0)
 		{ }
 		// E.g., vector({1,2,3})
 		vector(const std::initializer_list<T>& i)
-			: v(i), vi(v.begin())
+			: v(i), i(0)
 		{ }
 		vector(const vector& v_)
-			: v(v_.v), vi(v.begin())
+			: v(v_.v), i(v_.i)
 		{ }
 		vector(vector&& v_) noexcept
-			: v(std::move(v_.v)), vi(v.begin())
+			: v(std::move(v_.v)), i(v_.i)
 		{ }
 		vector& operator=(const vector& v_)
 		{
 			if (this != &v_) {
 				v = v_.v;
-				vi = v.begin();
+				i = v_.i;
 			}
 
 			return *this;
 		}
-		vector& operator=(vector&& v_)
+		vector& operator=(vector&& v_) noexcept
 		{
 			if (this != &v_) {
 				v = std::move(v_.v);
-				vi = v.begin();
+				i = v_.i;
 			}
 
 			return *this;
@@ -315,30 +316,30 @@ namespace fms::iterable {
 		// Strong equality.
 		bool operator==(const vector& _v) const
 		{
-			return vi == _v.vi && &v == &_v.v;
+			return i == _v.i && &v == &_v.v;
 		}
 
 		explicit operator bool() const
 		{
-			return vi != v.end();
+			return i < v.size();
 		}
 		T operator*() const
 		{
-			return *vi;
+			return v[i];
 		}
 		vector& operator++()
 		{
 			if (operator bool()) {
-				++vi;
+				++i;
 			}
 
 			return *this;
 		}
 
 		// Multi-pass
-		vector& reset()
+		vector& reset(size_t i_ = 0)
 		{
-			vi = v.begin();
+			i = i_;
 
 			return *this;
 		}
@@ -909,7 +910,6 @@ namespace fms::iterable {
 		binop& operator=(const binop& o)
 		{
 			if (this != &o) {
-				op = o.op;
 				i0 = o.i0;
 				i1 = o.i1;
 			}
