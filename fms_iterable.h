@@ -19,6 +19,7 @@ namespace fms::iterable {
 		{ i.operator bool() } -> std::same_as<bool>;
 		{ i.operator *() } -> std::convertible_to<typename I::value_type>;
 		{ i.operator++() } -> std::same_as<I&>;
+		//{ i.swap(i) } -> std::same_as<void>;
 		//		{ ++i } -> IsReferenceToBase;
 	};
 
@@ -133,7 +134,7 @@ namespace fms::iterable {
 
 	// Make STL container iterable. Assumes lifetime of container.
 	template <std::input_iterator I, class T = typename I::value_type>
-	class interval  {
+	class interval {
 		I b, e;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -312,9 +313,9 @@ namespace fms::iterable {
 		}
 
 		// Strong equality.
-		bool operator==(const vector& _v) const 
+		bool operator==(const vector& _v) const
 		{
-			return vi == _v.vi && &v == &_v.v; 
+			return vi == _v.vi && &v == &_v.v;
 		}
 
 		explicit operator bool() const
@@ -728,18 +729,28 @@ namespace fms::iterable {
 	class merge {
 		I0 i0;
 		I1 i1;
-
+		bool _0; // true use i0, false use i1
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
 		merge(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
-		{ }
+		{
+			if (i0 && i1) {
+				_0 = *i0 < *i1;
+			}
+			else if (i0) {
+				_0 = true;
+			}
+			else {
+				_0 = false;
+			}
+		}
 
 		bool operator==(const merge& i) const //= default;
 		{
-			return i0 == i.i0 && i1 == i.i1;
+			return i0 == i.i0 && i1 == i.i1 && _0 == i._0;
 		}
 
 		explicit operator bool() const
@@ -756,7 +767,7 @@ namespace fms::iterable {
 					return *i1;
 				}
 				else {
-					return *i0;
+					return _0 ? *i0 : *i1;
 				}
 			}
 
@@ -764,8 +775,6 @@ namespace fms::iterable {
 		}
 		merge& operator++()
 		{
-			using std::swap;
-
 			if (i0 && i1) {
 				if (*i0 < *i1) {
 					++i0;
@@ -773,19 +782,27 @@ namespace fms::iterable {
 				else if (*i1 < *i0) {
 					++i1;
 				}
-				else {
-					++i0;
-					swap(i0, i1);
+				else { // equivalent
+					if (_0) {
+						++i0;
+					}
+					else {
+						++i1;
+					}
+					_0 = !_0;
 				}
 			}
 			else {
 				if (i0) {
 					++i0;
+					_0 = true;
 				}
 				else if (i1) {
 					++i1;
+					_0 = false;
 				}
 			}
+	
 
 			return *this;
 		}
@@ -803,9 +820,9 @@ namespace fms::iterable {
 			: f(f)
 		{ }
 
-		bool operator==(const call& c) const 
+		bool operator==(const call& c) const
 		{
-			return f == c.f; 
+			return f == c.f;
 		}
 
 		explicit operator bool() const
@@ -847,7 +864,7 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		~apply() 
+		~apply()
 		{ }
 
 		bool operator==(const apply& a) const
@@ -892,6 +909,7 @@ namespace fms::iterable {
 		binop& operator=(const binop& o)
 		{
 			if (this != &o) {
+				op = o.op;
 				i0 = o.i0;
 				i1 = o.i1;
 			}
@@ -1178,11 +1196,11 @@ namespace fms::iterable {
 } // namespace fms::iterable
 
 #define FMS_ITERABLE_OPERATOR(X) \
-    X(+, std::plus<T> {})        \
-    X(-, std::minus<T> {})       \
-    X(*, std::multiplies<T> {})  \
-    X(/, std::divides<T> {})     \
-    X(%, std::modulus<T> {})
+    X(+, std::plus<T>{})        \
+    X(-, std::minus<T>{})       \
+    X(*, std::multiplies<T>{})  \
+    X(/, std::divides<T>{})     \
+    X(%, std::modulus<T>{})
 
 #define FMS_ITERABLE_OPERATOR_FUNCTION(OP, OP_)              \
     template <fms::iterable::input I,                        \
@@ -1192,10 +1210,15 @@ namespace fms::iterable {
     inline auto operator OP(const I& i, const J& j)          \
     {                                                        \
         return fms::iterable::binop(OP_, i, j);              \
-    }
-
+    }    
 FMS_ITERABLE_OPERATOR(FMS_ITERABLE_OPERATOR_FUNCTION)
 #undef FMS_ITERABLE_OPERATOR_FUNCTION
+
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator-(const I& i)
+{
+	return fms::iterable::constant(T(-1)) * i;
+}
 
 template <fms::iterable::input I, fms::iterable::input J>
 inline auto operator,(const I& i, const J& j)
@@ -1222,27 +1245,23 @@ inline auto operator==(const I& i, T t) { return fms::iterable::filter([t](T u)
 I::value_type> inline auto operator!=(const I& i, T t) { return
 fms::iterable::filter([t](T u) { return u != t; }, i); }
 */
-template <fms::iterable::input I, class T = typename I::value_type>
-inline auto
-operator<(const I& i, T t)
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator<(const I& i, T t)
 {
 	return fms::iterable::filter([t](T u) { return u < t; }, i);
 }
-template <fms::iterable::input I, class T = typename I::value_type>
-inline auto
-operator<=(const I& i, T t)
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator<=(const I& i, T t)
 {
 	return fms::iterable::filter([t](T u) { return u <= t; }, i);
 }
-template <fms::iterable::input I, class T = typename I::value_type>
-inline auto
-operator>(const I& i, T t)
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator>(const I& i, T t)
 {
 	return fms::iterable::filter([t](T u) { return u > t; }, i);
 }
-template <fms::iterable::input I, class T = typename I::value_type>
-inline auto
-operator>=(const I& i, T t)
+template<fms::iterable::input I, class T = typename I::value_type>
+inline auto operator>=(const I& i, T t)
 {
 	return fms::iterable::filter([t](T u) { return u >= t; }, i);
 }

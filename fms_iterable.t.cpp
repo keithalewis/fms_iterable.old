@@ -493,6 +493,13 @@ int test_merge = []() {
         auto c = merge(array(i), array(j));
         assert(equal(c, list({ 1, 2, 2, 2, 2, 3 })));
     }
+    {
+		auto i = iota(1);
+		auto j = constant(2) * i; // 2, 4, 6, 8, ...
+		auto k = i + j;		      // 3, 6, 9, 12, ...
+        auto l = merge(j, k);
+        assert(equal(take(l,6), list({ 2, 3, 4, 6, 6, 8 })));
+    }
 
     return 0;
 }();
@@ -544,6 +551,23 @@ int test_delta = []() {
         assert(*d == 2 - 1);
         ++d;
         assert(*d == 4 - 2);
+    }
+    {
+        delta d(power<int>(2));
+        auto _d = -d;
+
+        assert(_d);
+        assert(*_d == -1);
+        ++_d;
+        assert(*_d == -2);
+    }
+    {
+        auto _d = -delta(power<int>(2));
+
+        assert(_d);
+        assert(*_d == -1);
+        ++_d;
+        assert(*_d == -2);
     }
 
     return 0;
