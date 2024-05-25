@@ -153,7 +153,7 @@ namespace fms::iterable {
 			return e;
 		}
 
-		// strong equality
+		// same container
 		bool operator==(const interval& i) const
 		{
 			return b == i.b && e == i.e;
@@ -203,6 +203,7 @@ namespace fms::iterable {
 		using value_type = T;
 
 		template <input I>
+			requires std::same_as<T, typename I::value_type>
 		list(I i)
 		{
 			while (i) {
@@ -215,8 +216,16 @@ namespace fms::iterable {
 			: l(l)
 		{ }
 
-		// same list
-		bool operator==(const list& _l) const { return &l == &_l.l; }
+		bool operator==(const list& _l) const = default;
+
+		auto begin() const
+		{
+			return l.begin();
+		}
+		auto end() const
+		{
+			return l.end();
+		}
 
 		explicit operator bool() const //override
 		{
@@ -257,8 +266,13 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
+	template <input I, class T = typename I::value_type>
+	inline auto make_list(I i)
+	{
+		return list<T>(i);
+	}
 
-	// Value class.
+	// Value type.
 	template <class T>
 	class vector {
 		std::vector<T> v;
@@ -270,6 +284,16 @@ namespace fms::iterable {
 		vector()
 			: v{}, i(0)
 		{  }
+		template<input I>
+			requires std::same_as<T, typename I::value_type>
+		vector(I i)
+			: v{}, i(0)
+		{
+			while (i) {
+				v.push_back(*i);
+				++i;
+			}
+		}
 		vector(std::size_t n, const T* pt)
 			: v(pt, pt + n), i(0)
 		{ }
@@ -313,11 +337,9 @@ namespace fms::iterable {
 			return v.end();
 		}
 
-		// Strong equality.
-		bool operator==(const vector& _v) const
-		{
-			return i == _v.i && &v == &_v.v;
-		}
+		// TODO: make more efficient
+		// same container???
+		bool operator==(const vector& _v) const = default;
 
 		explicit operator bool() const
 		{
@@ -370,17 +392,32 @@ namespace fms::iterable {
 	template <input I, class T = typename I::value_type>
 	inline auto make_vector(I i)
 	{
-		vector<T> v;
-
-		while (i) {
-			v.push_back(*i);
-			++i;
-		}
-		v.reset();
-
-		return v;
+		return vector<T>(i);
 	}
 
+	template<class T>
+	struct empty {
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+
+		bool operator==(const empty&) const
+		{
+			return true;
+		}
+
+		explicit operator bool() const noexcept
+		{
+			return false;
+		}
+		value_type operator*() const noexcept
+		{
+			return T{};
+		}
+		empty& operator++() noexcept
+		{
+			return *this;
+		}
+	};
 
 	// Constant iterable: {c, c, c, ...}
 	template <class T>
@@ -391,7 +428,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		constant(T c) noexcept
+		constant(T c = 0) noexcept
 			: c(c)
 		{ }
 
@@ -427,10 +464,16 @@ namespace fms::iterable {
 			: t(t)
 		{ }
 
-		bool operator==(const iota& i) const { return t == i.t; }
+		bool operator==(const iota& i) const = default;
 
-		explicit operator bool() const noexcept { return true; }
-		value_type operator*() const noexcept { return t; }
+		explicit operator bool() const noexcept 
+		{ 
+			return true; 
+		}
+		value_type operator*() const noexcept 
+		{
+			return t; 
+		}
 		iota& operator++() noexcept
 		{
 			++t;
@@ -452,17 +495,17 @@ namespace fms::iterable {
 			: t(t), tn(tn)
 		{ }
 
-		bool operator==(const power& p) const { return t == p.t && tn == p.tn; }
+		bool operator==(const power& p) const = default;
 
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return true;
 		}
-		value_type operator*() const
+		value_type operator*() const noexcept
 		{
 			return tn;
 		}
-		power& operator++()
+		power& operator++() noexcept
 		{
 			tn *= t;
 
@@ -483,20 +526,17 @@ namespace fms::iterable {
 			: t(t), n(1)
 		{ }
 
-		bool operator==(const factorial& f) const //= default;
-		{
-			return t == f.t && n == f.n;
-		}
+		bool operator==(const factorial& f) const = default;
 
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return true;
 		}
-		value_type operator*() const
+		value_type operator*() const noexcept	
 		{
 			return t;
 		}
-		factorial& operator++()
+		factorial& operator++() noexcept
 		{
 			t *= n++;
 
@@ -519,17 +559,17 @@ namespace fms::iterable {
 
 		bool operator==(const choose& c) const = default;
 
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return k <= n;
 		}
-		value_type operator*() const
+		value_type operator*() const noexcept
 		{
 			return nk;
 		}
-		choose& operator++()
+		choose& operator++() noexcept
 		{
-			if (k <= n) {
+			if (operator bool()) {
 				nk *= n - k;
 				++k;
 				nk /= k;
@@ -552,10 +592,7 @@ namespace fms::iterable {
 			: p(p)
 		{ }
 
-		bool operator==(const pointer& _p) const //= default;
-		{
-			return p == _p.p;
-		}
+		bool operator==(const pointer& _p) const = default;
 
 		explicit operator bool() const noexcept
 		{
@@ -586,20 +623,17 @@ namespace fms::iterable {
 			: p(p)
 		{ }
 
-		bool operator==(const null_terminated_pointer& _p) const //= default;
-		{
-			return p == _p.p;
-		}
+		bool operator==(const null_terminated_pointer& _p) const = default;
 
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return *p != 0;
 		}
-		value_type operator*() const
+		value_type operator*() const noexcept
 		{
 			return *p;
 		}
-		null_terminated_pointer& operator++()
+		null_terminated_pointer& operator++() noexcept
 		{
 			if (operator bool())
 				++p;
@@ -621,10 +655,7 @@ namespace fms::iterable {
 			: t(t), b(true)
 		{ }
 
-		bool operator==(const once& o) const //= default;
-		{
-			return t == o.t && b == o.b;
-		}
+		bool operator==(const once& o) const = default;
 
 		explicit operator bool() const noexcept
 		{
@@ -637,6 +668,41 @@ namespace fms::iterable {
 		once& operator++() noexcept
 		{
 			b = false;
+
+			return *this;
+		}
+	};
+
+	// Repeat iterable
+	template <input I>
+	class repeat {
+		I i0, i;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = typename I::value_type;
+
+		repeat(I i) noexcept
+			: i0(i), i(i)
+		{ }
+
+		bool operator==(const repeat& o) const = default;
+
+		explicit operator bool() const noexcept
+		{
+			return true;
+		}
+		value_type operator*() const noexcept
+		{
+			return *i;
+		}
+		repeat& operator++() noexcept
+		{
+			if (i) {
+				++i;
+			}
+			else {
+				i = i0;
+			}
 
 			return *this;
 		}
@@ -655,10 +721,7 @@ namespace fms::iterable {
 			: i(i), n(n)
 		{ }
 
-		bool operator==(const take& t) const //= default;
-		{
-			return i == t.i && n == t.n;
-		}
+		bool operator==(const take& t) const = default;
 
 		explicit operator bool() const noexcept
 		{
@@ -688,21 +751,18 @@ namespace fms::iterable {
 
 	// i0 then i1
 	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-	class concatenate {
+	class concatenate2 {
 		I0 i0;
 		I1 i1;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		concatenate(const I0& i0, const I1& i1)
+		concatenate2(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
 		{ }
 		
-		bool operator==(const concatenate& i) const //= default;
-		{
-			return i0 == i.i0 && i1 == i.i1;
-		}
+		bool operator==(const concatenate2& i) const = default;
 
 		explicit operator bool() const
 		{
@@ -712,7 +772,7 @@ namespace fms::iterable {
 		{
 			return i0 ? *i0 : *i1;
 		}
-		concatenate& operator++()
+		concatenate2& operator++()
 		{
 			if (i0) {
 				++i0;
@@ -724,10 +784,20 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
+	template<input I>
+	inline auto concatenate(I i)
+	{
+		return i;
+	}
+	template<input I, input ...Is>
+	inline auto concatenate(I i, Is... is)
+	{
+		return concatenate2(i, concatenate(is...));
+	}
 
 	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
 	template <input I0, input I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
-	class merge {
+	class merge2 {
 		I0 i0;
 		I1 i1;
 		bool _0; // true use i0, false use i1
@@ -735,11 +805,16 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		merge(const I0& i0, const I1& i1)
+		merge2(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
 		{
 			if (i0 && i1) {
-				_0 = *i0 < *i1;
+				if (*i1 < *i0) {
+					_0 = false;
+				}
+				else { // less or equivalent
+					_0 = true;
+				}
 			}
 			else if (i0) {
 				_0 = true;
@@ -749,10 +824,7 @@ namespace fms::iterable {
 			}
 		}
 
-		bool operator==(const merge& i) const //= default;
-		{
-			return i0 == i.i0 && i1 == i.i1 && _0 == i._0;
-		}
+		bool operator==(const merge2& i) const = default;
 
 		explicit operator bool() const
 		{
@@ -774,7 +846,7 @@ namespace fms::iterable {
 
 			return i0 ? *i0 : *i1;
 		}
-		merge& operator++()
+		merge2& operator++()
 		{
 			if (i0 && i1) {
 				if (*i0 < *i1) {
@@ -790,7 +862,7 @@ namespace fms::iterable {
 					else {
 						++i1;
 					}
-					_0 = !_0;
+					_0 = !_0; // switch
 				}
 			}
 			else {
@@ -808,6 +880,16 @@ namespace fms::iterable {
 			return *this;
 		}
 	};
+	template<input I>
+	inline auto merge(I i)
+	{
+		return i;
+	}
+	template<input I, input ...Is>
+	inline auto merge(I i, Is... is)
+	{
+		return merge2(i, merge(is...));
+	}
 
 	// f(), ...
 	template <class F, class T = std::invoke_result_t<F>>
@@ -821,10 +903,7 @@ namespace fms::iterable {
 			: f(f)
 		{ }
 
-		bool operator==(const call& c) const
-		{
-			return f == c.f;
-		}
+		bool operator==(const call& c) const = default;
 
 		explicit operator bool() const
 		{
@@ -856,7 +935,14 @@ namespace fms::iterable {
 		apply(const apply& a)
 			: apply(a.f, a.i)
 		{ }
-		apply& operator=(const apply& a) = delete;
+		apply& operator=(const apply& a)
+		{
+			if (this != &a) {
+				i = a.i;
+			}
+
+			return *this;
+		}
 		~apply()
 		{ }
 
@@ -899,10 +985,16 @@ namespace fms::iterable {
 		binop(const binop& o)
 			: op(o.op), i0(o.i0), i1(o.i1)
 		{ }
-		binop& operator=(const binop& o) = delete;
+		binop& operator=(const binop& o)
+		{
+			if (this != &o) {
+				i0 = o.i0;
+				i1 = o.i1;
+			}
+		}
 		~binop() { }
 
-		bool operator==(const binop& o) const
+		bool operator==(const binop& o) const 
 		{
 			return i0 == o.i0 && i1 == o.i1;
 		}
@@ -932,9 +1024,8 @@ namespace fms::iterable {
 
 		void incr()
 		{
-			while (i && ++i && !p(*i)) {
+			while (i && ++i && !p(*i))
 				;
-			}
 		}
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1041,7 +1132,7 @@ namespace fms::iterable {
 			: op(op), i(i), t(t)
 		{ }
 		fold(const fold& f)
-			: op(f.op), i(f.i), t(f.t)
+			: fold(f.op, f.i, f.t)
 		{ }
 		fold& operator=(const fold& f)
 		{
@@ -1063,7 +1154,7 @@ namespace fms::iterable {
 		{
 			return i.operator bool();
 		}
-		value_type operator*() const
+		value_type operator*() const noexcept
 		{
 			return t;
 		}
@@ -1207,7 +1298,7 @@ inline auto operator-(const I& i)
 template <fms::iterable::input I, fms::iterable::input J>
 inline auto operator,(const I& i, const J& j)
 {
-	return fms::iterable::concatenate(i, j);
+	return fms::iterable::concatenate2(i, j);
 }
 
 /*

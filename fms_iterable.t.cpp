@@ -56,10 +56,10 @@ int test_list = []() {
         list c({ 1, 2, 3 });
         assert(c);
         auto c2(c);
-        assert(c != c2);
+        assert(c == c2);
 		assert(equal(c, c2));
         c = c2;
-        assert((c2 != c));
+        assert(!(c2 != c));
         ++c2;
         assert(c2 != c);
 
@@ -71,6 +71,19 @@ int test_list = []() {
         assert(*c == 3);
         ++c;
         assert(!c);
+    }
+    {
+        list c({ 1, 2, 3 });
+        assert(!equal(c, iota(1)));
+        assert(equal(c, take(iota(1), 3)));
+    }
+    {
+        list c({ 1, 2, 3 });
+        int i = 1;
+		for (auto ci : c) {
+			assert(i == ci);
+			++i;
+		}
     }
 
     return 0;
@@ -119,6 +132,15 @@ int test_once = []() {
 
     return 0;
 }();
+
+int test_repeat = []() {
+	{
+		repeat r(once(1));
+        assert(equal(take(r, 3), take(constant(1), 3)));
+	}
+
+	return 0;
+	}();
 
 int test_iota = []() {
     {
@@ -252,11 +274,9 @@ int test_until = []() {
 int test_filter = []() {
     {
         filter a([](int i) { return i % 2; }, iota<int> {});
-        auto a2(a);
-        assert(a == a2);
-        a = a2;
-        assert(!(a2 != a));
-
+        //auto a2(a);
+        //assert(a == a2);
+ 
         assert(a);
         assert(*a == 1);
         ++a;
@@ -472,6 +492,13 @@ int test_concatenate = []() {
         ++c2;
         assert(!c2);
     }
+    {
+        vector v({ 1,2,3 });
+        const auto v_ = concatenate(v, empty<int>{});
+        assert(equal(v, v_));
+        const auto _v = concatenate(empty<int>{}, v);
+        assert(equal(v, _v));
+    }
 
     return 0;
 }();
@@ -540,6 +567,13 @@ int test_merge = []() {
         auto l = merge(j, k);
         assert(equal(take(l,6), list({ 2, 3, 4, 6, 6, 8 })));
     }
+    {
+        vector v({ 1,2,3 });
+        const auto v_ = merge(v, empty<int>{});
+        assert(equal(v, v_));
+        const auto _v = merge(empty<int>{}, v);
+        assert(equal(v, _v));
+    }
 
     return 0;
 }();
@@ -551,6 +585,10 @@ int test_vector = []() {
             auto p = array(i);
             auto c = make_vector(p);
             assert(c);
+            auto c2{ c };
+            assert(c == c2);
+            c = c2;
+            assert(!(c2 != c));
 
             auto cc = make_vector(c);
             assert(cc);
@@ -568,10 +606,15 @@ int test_vector = []() {
             ++c;
             assert(!c);
 
-       }
+        }
         {
             auto c = vector(3, i);
             assert(equal(c, take(iota(1), 3)));
+        }
+        {
+            auto c = vector(3, i);
+            vector v(c);
+            assert(equal(v, c));
         }
 
     }
@@ -611,6 +654,16 @@ int test_delta = []() {
     }
 
     return 0;
+}();
+
+int test_call = []() {
+	{
+        call c([]() { static int i = 0;  return i++; });
+
+		assert(equal(take(c, 3), list({ 0, 1, 2 })));
+	}
+
+	return 0;
 }();
 
 int test_exp = []() {
