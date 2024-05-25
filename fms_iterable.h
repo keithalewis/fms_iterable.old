@@ -698,7 +698,7 @@ namespace fms::iterable {
 		concatenate(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
 		{ }
-
+		
 		bool operator==(const concatenate& i) const //= default;
 		{
 			return i0 == i.i0 && i1 == i.i1;

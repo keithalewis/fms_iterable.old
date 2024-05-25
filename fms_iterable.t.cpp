@@ -447,6 +447,31 @@ int test_concatenate = []() {
         ++c;
         assert(!c);
     }
+    {
+        auto p = array(i);
+        auto q = array(j);
+        auto c = concatenate(p, q);
+        auto c2(c);
+		assert(c == c2);
+        c2 = c;
+        assert(!(c2 != c));
+
+        assert(*c2 == 1);
+        ++c2;
+        assert(c2);
+        assert(*c2 == 2);
+        ++c2;
+        assert(*c2 == 3);
+        ++c2;
+        assert(c2);
+        assert(*c2 == 4);
+        ++c2;
+        assert(*c2 == 5);
+        ++c2;
+        assert(*c2 == 6);
+        ++c2;
+        assert(!c2);
+    }
 
     return 0;
 }();
