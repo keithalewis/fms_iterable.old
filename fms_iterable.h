@@ -854,16 +854,9 @@ namespace fms::iterable {
 			: f(f), i(i)
 		{ }
 		apply(const apply& a)
-			: f(a.f), i(a.i)
+			: apply(a.f, a.i)
 		{ }
-		apply& operator=(const apply& a)
-		{
-			if (this != &a) {
-				i = a.i;
-			}
-
-			return *this;
-		}
+		apply& operator=(const apply& a) = delete;
 		~apply()
 		{ }
 
@@ -906,15 +899,7 @@ namespace fms::iterable {
 		binop(const binop& o)
 			: op(o.op), i0(o.i0), i1(o.i1)
 		{ }
-		binop& operator=(const binop& o)
-		{
-			if (this != &o) {
-				i0 = o.i0;
-				i1 = o.i1;
-			}
-
-			return *this;
-		}
+		binop& operator=(const binop& o) = delete;
 		~binop() { }
 
 		bool operator==(const binop& o) const

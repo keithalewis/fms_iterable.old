@@ -201,7 +201,7 @@ int test_apply = []() {
         apply a([](int x) { return 0.5 * x; }, iota<int> {});
         auto a2(a);
         assert(a == a2);
-        a = a2;
+        //a = a2;
         assert(!(a2 != a));
 
         assert(a);
@@ -212,6 +212,21 @@ int test_apply = []() {
         ++a;
         assert(a);
         assert(*a == 1.);
+    }
+    {
+        apply a([](int x) { return 0.5 * x; }, iota<int> {});
+        apply a2([](int x) { return 0.5 * x; }, iota<int> {});
+        //assert(a != a2);
+        apply a3(a2);
+        assert(a3);
+        assert(*a3 == 0.);
+        ++a3;
+        assert(a3);
+        assert(*a3 == 0.5);
+        ++a3;
+        assert(a3);
+        assert(*a3 == 1.);
+
     }
 
     return 0;
