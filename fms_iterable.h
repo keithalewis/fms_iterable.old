@@ -859,7 +859,6 @@ namespace fms::iterable {
 		apply& operator=(const apply& a)
 		{
 			if (this != &a) {
-				// f = a.f;
 				i = a.i;
 			}
 
@@ -870,7 +869,7 @@ namespace fms::iterable {
 
 		bool operator==(const apply& a) const
 		{
-			return f == a.f && i == a.i;
+			return i == a.i;
 		}
 
 		explicit operator bool() const
