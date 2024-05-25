@@ -920,7 +920,7 @@ namespace fms::iterable {
 
 		bool operator==(const binop& o) const
 		{
-			return op == o.op && i0 == o.i0 && i1 == o.i1;
+			return i0 == o.i0 && i1 == o.i1;
 		}
 
 		explicit operator bool() const
