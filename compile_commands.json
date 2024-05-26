@@ -1,0 +1,7 @@
+[
+    {
+		"directory": "/mnt/c/users/kal/source/repos/keithalewis/fms_iterable",
+        "command": "/usr/bin/g++ -std=c++2b iterable.t.cpp",
+        "file": "iterable.t.cpp"
+    }
+]
