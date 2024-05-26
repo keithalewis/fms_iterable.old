@@ -758,10 +758,14 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
+		concatenate2() = default;
 		concatenate2(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
 		{ }
-		
+		concatenate2(const concatenate2&) = default;
+		concatenate2& operator=(const concatenate2&) = default;
+		~concatenate2() = default;
+
 		bool operator==(const concatenate2& i) const = default;
 
 		explicit operator bool() const
@@ -903,7 +907,6 @@ namespace fms::iterable {
 			: f(f)
 		{ }
 
-		bool operator==(const call& c) const = default;
 
 		explicit operator bool() const
 		{
@@ -1086,10 +1089,10 @@ namespace fms::iterable {
 		until(const until& a)
 			: p(a.p), i(a.i)
 		{ }
-		until& operator=(const until& a)
+		until& operator=(const until& u)
 		{
-			if (this != &a) {
-				i = a.i;
+			if (this != &u) {
+				i = u.i;
 			}
 
 			return *this;
@@ -1097,9 +1100,9 @@ namespace fms::iterable {
 		~until()
 		{ }
 
-		bool operator==(const until& a) const
+		bool operator==(const until& u) const
 		{
-			return p == a.p and i == a.i;
+			return i == u.i;
 		}
 
 		explicit operator bool() const
@@ -1147,7 +1150,7 @@ namespace fms::iterable {
 
 		bool operator==(const fold& f) const
 		{
-			return i == f.i && t == f.t; // BinOp is part of type
+			return i == f.i && t == f.t;
 		}
 
 		explicit operator bool() const

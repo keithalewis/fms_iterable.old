@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="fms_iterable.h" />
+    <ClInclude Include="fms_time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fms_iterable.t.cpp" />
