@@ -9,7 +9,7 @@
 
 using namespace fms::iterable;
 
-int test_interval = []() {
+int test_interval() {
     {
         std::vector v { 1, 2, 3 };
         interval c(v.begin(), v.end());
@@ -49,9 +49,9 @@ int test_interval = []() {
     }
 
     return 0;
-}();
+}
 
-int test_list = []() {
+int test_list() {
     {
         list c({ 1, 2, 3 });
         assert(c);
@@ -87,9 +87,9 @@ int test_list = []() {
     }
 
     return 0;
-}();
+}
 
-int test_constant = []() {
+int test_constant() {
     constant c(1);
     constant c2(c);
     c = c2;
@@ -105,18 +105,18 @@ int test_constant = []() {
     auto cc = constant(1.) * constant(2.);
 
     return 0;
-}();
+}
 
-int test_choose = []() {
+int test_choose() {
     {
         list l({ 1, 3, 3, 1 });
         choose c(3);
         assert(equal(l, c));
     }
     return 0;
-}();
+}
 
-int test_once = []() {
+int test_once() {
     {
         once o(1);
         once o2(o);
@@ -131,18 +131,18 @@ int test_once = []() {
     }
 
     return 0;
-}();
+}
 
-int test_repeat = []() {
+int test_repeat() {
 	{
 		repeat r(once(1));
         assert(equal(take(r, 3), take(constant(1), 3)));
 	}
 
 	return 0;
-	}();
+	}
 
-int test_iota = []() {
+int test_iota() {
     {
         iota i(2);
         assert(i);
@@ -158,9 +158,9 @@ int test_iota = []() {
     }
 
     return 0;
-}();
+}
 
-int test_skip = []() {
+int test_skip() {
     {
         iota<int> i;
         i = drop(i, 2);
@@ -175,9 +175,9 @@ int test_skip = []() {
     }
 
     return 0;
-}();
+}
 
-int test_power = []() {
+int test_power() {
     {
         power p(2);
         assert(p);
@@ -198,9 +198,9 @@ int test_power = []() {
     }
 
     return 0;
-}();
+}
 
-int test_factorial = []() {
+int test_factorial() {
     {
         factorial f;
         assert(f);
@@ -216,9 +216,9 @@ int test_factorial = []() {
     }
 
     return 0;
-}();
+}
 
-int test_apply = []() {
+int test_apply() {
     {
         apply a([](int x) { return 0.5 * x; }, iota<int> {});
         auto a2(a);
@@ -252,9 +252,9 @@ int test_apply = []() {
     }
 
     return 0;
-}();
+}
 
-int test_until = []() {
+int test_until() {
     {
         until a(
             [](double x) { return x <= std::numeric_limits<double>::epsilon(); },
@@ -269,9 +269,9 @@ int test_until = []() {
     }
 
     return 0;
-}();
+}
 
-int test_filter = []() {
+int test_filter() {
     {
         filter a([](int i) { return i % 2; }, iota<int> {});
         //auto a2(a);
@@ -306,9 +306,9 @@ int test_filter = []() {
     }
 
     return 0;
-}();
+}
 
-int test_fold = []() {
+int test_fold() {
     {
         fold f(std::plus<int> {}, iota<int> {});
         auto f2(f);
@@ -349,9 +349,9 @@ int test_fold = []() {
     }
 
     return 0;
-}();
+}
 
-int test_pointer = []() {
+int test_pointer() {
     int i[] = { 1, 2, 3 };
     pointer p(i);
     pointer p2(p);
@@ -368,9 +368,9 @@ int test_pointer = []() {
     ++p; // *p is undefined
 
     return 0;
-}();
+}
 
-int test_zero_pointer = []() {
+int test_zero_pointer() {
     {
         int i[] = { 1, 2, 0 };
         null_terminated_pointer p(i);
@@ -399,9 +399,9 @@ int test_zero_pointer = []() {
     }
 
     return 0;
-}();
+}
 
-int test_take = []() {
+int test_take() {
     int i[] = { 1, 2, 3 };
     {
         pointer p(i);
@@ -441,9 +441,9 @@ int test_take = []() {
     }
 
     return 0;
-}();
+}
 
-int test_concatenate = []() {
+int test_concatenate() {
     int i[] = { 1, 2, 3 };
     int j[] = { 4, 5, 6 };
     {
@@ -501,9 +501,9 @@ int test_concatenate = []() {
     }
 
     return 0;
-}();
+}
 
-int test_merge = []() {
+int test_merge() {
     {
         int i[] = { 1, 3, 5 };
         int j[] = { 2, 4, 6 };
@@ -576,9 +576,9 @@ int test_merge = []() {
     }
 
     return 0;
-}();
+}
 
-int test_vector = []() {
+int test_vector() {
     {
         int i[] = { 1, 2, 3 };
         {
@@ -620,9 +620,9 @@ int test_vector = []() {
     }
 
     return 0;
-}();
+}
 
-int test_delta = []() {
+int test_delta() {
     {
         delta d(power<int>(2));
         auto d2(d);
@@ -654,9 +654,9 @@ int test_delta = []() {
     }
 
     return 0;
-}();
+}
 
-int test_call = []() {
+int test_call() {
 	{
         call c([]() { static int i = 0;  return i++; });
 
@@ -664,9 +664,9 @@ int test_call = []() {
 	}
 
 	return 0;
-}();
+}
 
-int test_exp = []() {
+int test_exp() {
     const auto eps = [](double x) { return x + 1 == 1; };
     double x = 1;
     {
@@ -683,9 +683,33 @@ int test_exp = []() {
     }
 
     return 0;
-}();
+}
 
 int main()
 {
+    test_interval();
+    test_list();
+    test_constant();
+    test_choose();
+    test_once();
+    test_repeat();
+    test_iota();
+    test_skip();
+    test_power();
+    test_factorial();
+    test_apply();
+    test_until();
+    test_filter();
+    test_fold();
+    test_pointer();
+    test_zero_pointer();
+    test_take();
+    test_concatenate();
+    test_merge();
+    test_vector();
+    test_delta();
+    test_call();
+    test_exp();
+
     return 0;
 }

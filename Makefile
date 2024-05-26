@@ -8,6 +8,9 @@ fms_iterable.t: $(SOURCES)
 test: ./fms_iterable.t
 	./fms_iterable.t
 
+tidy: fms_iterable.t.cpp
+	run-clang-tidy fms_iterable.t.cpp
+
 check: $(SOURCES)
 	clang-tidy -checks=cert-* --warnings-as-errors=* $(SOURCES)
 

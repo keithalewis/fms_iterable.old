@@ -709,7 +709,7 @@ namespace fms::iterable {
 	};
 
 	// Take at most n elements.
-	template <input I, class T = I::value_type>
+	template <input I, class T = typename I::value_type>
 	class take {
 		I i;
 		std::size_t n;
