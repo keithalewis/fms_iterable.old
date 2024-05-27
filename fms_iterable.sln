@@ -7,7 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fms_iterable", "fms_iterabl
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B19355D4-3A3B-4B8B-8228-37E48BE3BBE5}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\iterable.yml = .github\workflows\iterable.yml
+		.github\workflows\cmake-multi-platform.yml = .github\workflows\cmake-multi-platform.yml
 	EndProjectSection
 EndProject
 Global
