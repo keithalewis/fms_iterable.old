@@ -11,16 +11,14 @@
 namespace fms::iterable {
 
 
-	template <class I>
+	template <class I, class T = typename I::value_type>
 	concept input = requires(I i) {
 		//typename I::iterator_concept;
 		typename I::iterator_category;
 		typename I::value_type;
 		{ i.operator bool() } -> std::same_as<bool>;
-		{ i.operator *() } -> std::convertible_to<typename I::value_type>;
+		{ i.operator *() } -> std::convertible_to<T>;
 		{ i.operator++() } -> std::same_as<I&>;
-		//{ i.swap(i) } -> std::same_as<void>;
-		//		{ ++i } -> IsReferenceToBase;
 	};
 
 	template <class I>
@@ -42,7 +40,7 @@ namespace fms::iterable {
 
 	// All elements equal.
 	template <input I, input J>
-	inline bool equal(I i, J j) noexcept
+	constexpr bool equal(I i, J j) noexcept
 	{
 		while (i && j) {
 			if (*i != *j) {
@@ -57,8 +55,12 @@ namespace fms::iterable {
 
 	// length(i, length(j)) = length(i) + length(j)
 	template <input I>
-	inline std::size_t length(I i, std::size_t n = 0) noexcept
+	constexpr std::size_t length(I i, std::size_t n = 0) noexcept
 	{
+		if constexpr (has_end<I>) {
+			return n + std::distance(i, i.end());
+		}
+
 		while (i) {
 			++i;
 			++n;
@@ -69,11 +71,18 @@ namespace fms::iterable {
 
 	// Drop at most n from the beginning.
 	template <input I>
-	inline I drop(I i, std::size_t n) noexcept
+	constexpr I drop(I i, std::size_t n) noexcept
 	{
-		while (i && n) {
-			++i;
-			--n;
+		using category = typename I::iterator_category;
+
+		if constexpr (std::is_base_of_v<std::random_access_iterator_tag, category>) {
+			std::advance(i, std::min(n, length(i)));
+		}
+		else {
+			while (i && n) {
+				++i;
+				--n;
+			}
 		}
 
 		return i;
@@ -81,7 +90,7 @@ namespace fms::iterable {
 
 	// Last element of iterable.
 	template <input I>
-	inline I back(I i)
+	constexpr I back(I i)
 	{
 		if constexpr (has_back<I>) {
 			return i.back();
@@ -98,7 +107,7 @@ namespace fms::iterable {
 
 	// For use with STL
 	template <class I>
-	inline I begin(I i)
+	constexpr I begin(I i)
 	{
 		if constexpr (has_begin<I>) {
 			return i.begin();
@@ -108,7 +117,7 @@ namespace fms::iterable {
 	}
 	// ++back(i)
 	template <input I>
-	inline I end(I i)
+	constexpr I end(I i)
 	{
 		if constexpr (has_end<I>) {
 			return i.end();
@@ -121,7 +130,7 @@ namespace fms::iterable {
 		return i;
 	}
 
-	/*
+	/* TODO: use when deducing this supported
 	struct add_postfix_increment {
 		template <typename Self>
 		auto operator++(this Self && self, int) {
@@ -140,36 +149,36 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		interval(I b, I e)
+		constexpr interval(I b, I e)
 			: b(b), e(e)
 		{ }
 
-		auto begin() const
+		constexpr auto begin() const
 		{
 			return b;
 		}
-		auto end() const
+		constexpr auto end() const
 		{
 			return e;
 		}
 
 		// same container
-		bool operator==(const interval& i) const
+		constexpr bool operator==(const interval& i) const
 		{
 			return b == i.b && e == i.e;
 		}
 
 		// TODO: size() ???
 
-		explicit operator bool() const
+		constexpr explicit operator bool() const
 		{
 			return b != e;
 		}
-		value_type operator*() const
+		constexpr value_type operator*() const
 		{
 			return *b;
 		}
-		interval& operator++()
+		constexpr interval& operator++()
 		{
 			if (operator bool()) {
 				++b;
@@ -177,8 +186,7 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		/*
-		interval operator++(int)
+		constexpr interval operator++(int)
 		{
 			auto i = *this;
 
@@ -186,10 +194,9 @@ namespace fms::iterable {
 
 			return i;
 		}
-		*/
 	};
 	template<class C> // container
-	inline auto make_interval(C& c)
+	constexpr auto make_interval(C& c)
 	{
 		return interval(c.begin(), c.end());
 	}
