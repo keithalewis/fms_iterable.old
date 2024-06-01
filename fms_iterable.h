@@ -1271,6 +1271,35 @@ namespace fms::iterable {
 		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
 	}
 
+	template<input I, input J>
+	class pair {
+		I i;
+		J j;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = std::pair<typename I::value_type, typename J::value_type>;
+
+		pair(I i, J j)
+			: i(i), j(j)
+		{ }
+
+		explicit operator bool() const
+		{
+			return i and j;
+		}
+		value_type operator*() const
+		{
+			return { *i, *j };
+		}
+		pair& operator++()
+		{
+			++i;
+			++j;
+
+			return *this;
+		}
+	};
+
 } // namespace fms::iterable
 
 #define FMS_ITERABLE_OPERATOR(X) \

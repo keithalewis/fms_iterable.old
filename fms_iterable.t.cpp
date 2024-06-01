@@ -695,6 +695,19 @@ int test_exp() {
 
 	return 0;
 }
+int test_pair()
+{
+	{
+		pair p(iota(1), iota(2));
+		assert(p);
+		assert(*p == std::make_pair(1,2));
+
+		++p;
+		assert(p);
+		assert(*p == std::make_pair(2, 3));
+	}
+	return 0;
+}
 
 int main()
 {
@@ -721,6 +734,7 @@ int main()
 	test_delta();
 	test_call();
 	test_exp();
+	test_pair();
 
 	return 0;
 }
