@@ -201,6 +201,7 @@ namespace fms::iterable {
 		return interval(c.begin(), c.end());
 	}
 
+	// TODO: remove???
 	// Value class.
 	template <class T>
 	class list {
@@ -279,6 +280,7 @@ namespace fms::iterable {
 		return list<T>(i);
 	}
 
+	// TODO: remove???
 	// Value type.
 	template <class T>
 	class vector {
@@ -402,6 +404,7 @@ namespace fms::iterable {
 		return vector<T>(i);
 	}
 
+	// Iterable with no elements.
 	template<class T>
 	struct empty {
 		using iterator_category = std::input_iterator_tag;
@@ -910,10 +913,9 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		call(const F& f)
+		call(F&& f)
 			: f(f)
 		{ }
-
 
 		explicit operator bool() const
 		{
@@ -942,13 +944,29 @@ namespace fms::iterable {
 		apply(const F& f, const I& i)
 			: f(f), i(i)
 		{ }
+		apply(F&& f, const I& i)
+			: f(f), i(i)
+		{ }
 		apply(const apply& a)
-			: apply(a.f, a.i)
+			: f(a.f), i(a.i)
+		{ }
+		apply(apply&& a)
+			: f(a.f), i(std::move(a.i))
 		{ }
 		apply& operator=(const apply& a)
 		{
 			if (this != &a) {
+				//f = a.f;
 				i = a.i;
+			}
+
+			return this;
+		}
+		apply& operator=(apply&& a)
+		{
+			if (this != &a) {
+				//f = a.f;
+				i = std::move(a.i);
 			}
 
 			return *this;
@@ -992,14 +1010,29 @@ namespace fms::iterable {
 		binop(const BinOp& op, I0 i0, I1 i1)
 			: op(op), i0(i0), i1(i1)
 		{ }
+		binop(BinOp&& op, I0 i0, I1 i1)
+			: op(op), i0(i0), i1(i1)
+		{ }
 		binop(const binop& o)
 			: op(o.op), i0(o.i0), i1(o.i1)
+		{ }
+		binop(binop&& o) noexcept
+			: op(o.op), i0(std::move(o.i0)), i1(std::move(o.i1))
 		{ }
 		binop& operator=(const binop& o)
 		{
 			if (this != &o) {
+				//op = o.op;
 				i0 = o.i0;
 				i1 = o.i1;
+			}
+		}
+		binop& operator=(binop&& o)
+		{
+			if (this != &o) {
+				//op = o.op;
+				i0 = std::move(o.i0);
+				i1 = std::move(o.i1);
 			}
 		}
 		~binop() { }
@@ -1041,18 +1074,33 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 
-		filter(const P& p, const I& i)
-			: p(p), i(i)
+		filter(const filter& a)
+			: p(a.p), i(a.i)
 		{
 			incr();
 		}
-		filter(const filter& a)
-			: p(a.p), i(a.i)
+		filter(P&& p, const I& i)
+			: p(p), i(std::move(i))
+		{
+			incr();
+		}
+		filter(filter&& a)
+			: p(a.p), i(std::move(a.i))
 		{ }
 		filter& operator=(const filter& a)
 		{
 			if (this != &a) {
+				//p = a.p;
 				i = a.i;
+			}
+
+			return *this;
+		}
+		filter& operator=(filter&& a)
+		{
+			if (this != &a) {
+				//p = a.p;
+				i = std::move(a.i);
 			}
 
 			return *this;
@@ -1093,13 +1141,29 @@ namespace fms::iterable {
 		until(const P& p, const I& i)
 			: p(p), i(i)
 		{ }
+		until(P&& p, const I& i)
+			: p(p), i(i)
+		{ }
 		until(const until& a)
 			: p(a.p), i(a.i)
+		{ }
+		until(until&& a)
+			: p(a.p), i(std::move(a.i))
 		{ }
 		until& operator=(const until& u)
 		{
 			if (this != &u) {
+				//p = u.p;
 				i = u.i;
+			}
+
+			return *this;
+		}
+		until& operator=(until&& u)
+		{
+			if (this != &u) {
+				//p = u.p;
+				i = std::move(u.i);
 			}
 
 			return *this;
@@ -1141,10 +1205,22 @@ namespace fms::iterable {
 		fold(const BinOp& op, const I& i, T t = 0)
 			: op(op), i(i), t(t)
 		{ }
+		fold(BinOp&& op, const I& i, T t = 0)
+			: op(op), i(i), t(t)
+		{ }
 		fold(const fold& f)
 			: fold(f.op, f.i, f.t)
 		{ }
 		fold& operator=(const fold& f)
+		{
+			if (this != &f) {
+				i = f.i;
+				t = f.t;
+			}
+
+			return *this;
+		}
+		fold& operator=(fold&& f)
 		{
 			if (this != &f) {
 				i = f.i;
@@ -1212,7 +1288,14 @@ namespace fms::iterable {
 		const D& d;
 		I i;
 		T t, _t;
-
+		void init()
+		{
+			if (i) {
+				t = *i;
+				++i;
+				_t = i ? *i : t;
+			}
+		}
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
@@ -1220,11 +1303,12 @@ namespace fms::iterable {
 		delta(const I& _i, const D& _d = std::minus<T>{})
 			: d(_d), i(_i), t{}, _t{}
 		{
-			if (i) {
-				t = *i;
-				++i;
-				_t = i ? *i : t;
-			}
+			init();
+		}
+		delta(I&& _i, const D& _d = std::minus<T>{})
+			: d(_d), i(std::move(_i)), t{}, _t{}
+		{
+			init();
 		}
 		delta(const delta& _d)
 			: d(_d.d), i(_d.i), t(_d.t), _t(_d._t)

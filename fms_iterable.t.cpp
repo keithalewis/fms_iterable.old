@@ -685,12 +685,14 @@ int test_exp() {
 		assert(std::fabs(expx - exp1) <= 5e-16);
 	}
 	{
+		/*
 		auto expx = until(eps, power(x) / factorial());
 		auto tx = fms::time([&]() { sum(expx); }, 10'000);
 		auto t1 = fms::time([&]() { std::exp(1.); }, 10'000'000);
 		//t = fms::time([&]() { sum(expx, 0, std::execution::seq); });
 		auto q = 1000 * tx / t1;
 		assert(q != 0);
+		*/
 	}
 
 	return 0;

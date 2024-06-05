@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.22)
+cmake_minimum_required (VERSION 3.16)
 
 project (fms_iterable VERSION 1.20
                       DESCRIPTION "Iterators with operator bool() to detect end()."
