@@ -960,7 +960,7 @@ namespace fms::iterable {
 				i = a.i;
 			}
 
-			return this;
+			return *this;
 		}
 		apply& operator=(apply&& a)
 		{
@@ -1026,6 +1026,8 @@ namespace fms::iterable {
 				i0 = o.i0;
 				i1 = o.i1;
 			}
+
+			return *this;
 		}
 		binop& operator=(binop&& o)
 		{
