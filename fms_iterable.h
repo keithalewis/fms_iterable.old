@@ -10,7 +10,6 @@
 
 namespace fms::iterable {
 
-
 	template <class I, class T = typename I::value_type>
 	concept input = requires(I i) {
 		//typename I::iterator_concept;
@@ -188,7 +187,7 @@ namespace fms::iterable {
 		}
 		constexpr interval operator++(int)
 		{
-			auto i = *this;
+			auto i{*this};
 
 			operator++();
 
@@ -427,6 +426,10 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
+		empty operator++(int) noexcept
+		{
+			return empty{};
+		}
 	};
 
 	// Constant iterable: {c, c, c, ...}
@@ -459,6 +462,10 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
+		constant operator++(int) noexcept
+		{
+			return constant(c);
+		}
 	};
 
 	// t, t + 1, t + 2, ...
@@ -489,6 +496,14 @@ namespace fms::iterable {
 			++t;
 
 			return *this;
+		}
+		iota operator++(int) noexcept
+		{
+			iota i{ *this };
+			
+			operator++();
+
+			return i;
 		}
 	};
 
@@ -521,6 +536,14 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		power operator++(int) noexcept
+		{
+			auto p{ *this };
+			
+			operator++();
+
+			return p;
+		}
 	};
 
 	// 1, 1, 2, 6, 24, ...
@@ -551,6 +574,14 @@ namespace fms::iterable {
 			t *= n++;
 
 			return *this;
+		}
+		factorial operator++(int) noexcept
+		{
+			auto f{ *this };
+
+			operator++();
+
+			return f;
 		}
 	};
 
@@ -587,6 +618,14 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		choose operator++(int) noexcept
+		{
+			auto c{ *this };
+
+			operator++();
+
+			return c;
+		}
 	};
 
 	// Unsafe pointer interface.
@@ -617,6 +656,14 @@ namespace fms::iterable {
 			++p;
 
 			return *this;
+		}
+		pointer operator++(int) noexcept
+		{
+			auto _p{ *this };
+
+			operator++();
+
+			return _p;
 		}
 	};
 
@@ -650,6 +697,14 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		null_terminated_pointer operator++(int) noexcept
+		{
+			auto _p{ *this };
+
+			operator++();
+
+			return _p;
+		}
 	};
 
 	// Iterable having exactly one element. {t}
@@ -680,6 +735,14 @@ namespace fms::iterable {
 			b = false;
 
 			return *this;
+		}
+		once operator++(int) noexcept
+		{
+			auto o{ *this };
+
+			operator++();
+
+			return o;
 		}
 	};
 
@@ -716,6 +779,14 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		repeat operator++(int) noexcept
+		{
+			auto r{ *this };
+
+			operator++();
+	
+			return r;
+		}
 	};
 
 	// Take at most n elements.
@@ -749,6 +820,14 @@ namespace fms::iterable {
 			}
 
 			return *this;
+		}
+		take operator++(int) noexcept
+		{
+			auto t{ *this };
+
+			operator++();
+
+			return t;
 		}
 	};
 
@@ -796,6 +875,14 @@ namespace fms::iterable {
 			}
 
 			return *this;
+		}
+		concatenate2 operator++(int) noexcept
+		{
+			auto c{ *this };
+
+			operator++();
+
+			return c;
 		}
 	};
 	template<input I>
@@ -893,6 +980,14 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		merge2 operator++(int) noexcept
+		{
+			auto m{ *this };
+
+			operator++();
+
+			return m;
+		}
 	};
 	template<input I>
 	inline auto merge(I i)
@@ -908,7 +1003,7 @@ namespace fms::iterable {
 	// f(), ...
 	template <class F, class T = std::invoke_result_t<F>>
 	class call {
-		const F& f;
+		F f;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
@@ -935,16 +1030,13 @@ namespace fms::iterable {
 	// f(*i), f(*++i), f(*++i), ...
 	template <class F, input I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
 	class apply {
-		const F& f;
+		F f;
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
 
 		apply(const F& f, const I& i)
-			: f(f), i(i)
-		{ }
-		apply(F&& f, const I& i)
 			: f(f), i(i)
 		{ }
 		apply(const apply& a)
@@ -987,11 +1079,19 @@ namespace fms::iterable {
 		{
 			return f(*i);
 		}
-		apply& operator++()
+		apply& operator++() noexcept
 		{
 			++i;
 
 			return *this;
+		}
+		apply operator++(int) noexcept
+		{
+			auto a{ *this };
+
+			operator++();
+
+			return a;
 		}
 	};
 
@@ -1000,7 +1100,7 @@ namespace fms::iterable {
 	// Apply a binary operation to elements of two iterable.
 	template <class BinOp, input I0, input I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type, class T = std::invoke_result_t<BinOp, T0, T1>>
 	class binop {
-		const BinOp& op;
+		BinOp op;
 		I0 i0;
 		I1 i1;
 	public:
@@ -1052,19 +1152,27 @@ namespace fms::iterable {
 		{
 			return op(*i0, *i1);
 		}
-		binop& operator++()
+		binop& operator++() noexcept
 		{
 			++i0;
 			++i1;
 
 			return *this;
 		}
+		binop operator++(int) noexcept
+		{
+			auto b{ *this };
+
+			operator++();
+
+			return b;
+		}
 	};
 
 	// Elements satisfying predicate.
 	template <class P, input I, class T = typename I::value_type>
 	class filter {
-		const P& p;
+		P p;
 		I i;
 
 		void incr()
@@ -1123,18 +1231,26 @@ namespace fms::iterable {
 		{
 			return *i;
 		}
-		filter& operator++()
+		filter& operator++() noexcept
 		{
 			incr();
 
 			return *this;
+		}
+		filter operator++(int) noexcept
+		{
+			auto f{ *this };
+
+			operator++();
+
+			return f;
 		}
 	};
 
 	// Stop at first element satisfying predicate.
 	template <class P, input I, class T = typename I::value_type>
 	class until {
-		const P& p;
+		P p;
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1186,18 +1302,26 @@ namespace fms::iterable {
 		{
 			return *i;
 		}
-		until& operator++()
+		until& operator++() noexcept
 		{
 			++i;
 
 			return *this;
+		}
+		until operator++(int) noexcept
+		{
+			auto u{ *this };
+
+			operator++();
+
+			return u;
 		}
 	};
 
 	// Right fold: t, op(t, *i), op(op(t, *i), *++i), ...
 	template <class BinOp, input I, class T = typename I::value_type>
 	class fold {
-		const BinOp& op;
+		BinOp op;
 		I i;
 		T t;
 	public:
@@ -1222,7 +1346,7 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		fold& operator=(fold&& f)
+		fold& operator=(fold&& f) noexcept
 		{
 			if (this != &f) {
 				i = f.i;
@@ -1246,7 +1370,7 @@ namespace fms::iterable {
 		{
 			return t;
 		}
-		fold& operator++()
+		fold& operator++() noexcept
 		{
 			if (i) {
 				t = op(t, *i);
@@ -1254,6 +1378,14 @@ namespace fms::iterable {
 			}
 
 			return *this;
+		}
+		fold operator++(int) noexcept
+		{
+			auto f{ *this };
+
+			operator++();
+
+			return f;
 		}
 	};
 	template <input I, class T = typename I::value_type>
@@ -1287,7 +1419,7 @@ namespace fms::iterable {
 	// d(i[1], i[0]), d(i[2], i[1]), ...
 	template <input I, class T = typename I::value_type, class D = std::minus<T>, typename U = std::invoke_result_t<D, T, T>>
 	class delta {
-		const D& d;
+		D d;
 		I i;
 		T t, _t;
 		void init()
@@ -1341,7 +1473,7 @@ namespace fms::iterable {
 		{
 			return d(*i, t);
 		}
-		delta& operator++()
+		delta& operator++() noexcept
 		{
 			if (i) {
 				t = *i;
@@ -1349,6 +1481,14 @@ namespace fms::iterable {
 			}
 
 			return *this;
+		}
+		delta operator++(int) noexcept
+		{
+			auto d{ *this };
+
+			operator++();
+
+			return d;
 		}
 	};
 
@@ -1384,12 +1524,20 @@ namespace fms::iterable {
 		{
 			return { *i, *j };
 		}
-		pair& operator++()
+		pair& operator++() noexcept
 		{
 			++i;
 			++j;
 
 			return *this;
+		}
+		pair operator++(int) noexcept
+		{
+			auto p{ *this };
+
+			operator++();
+
+			return p;
 		}
 	};
 
