@@ -52,7 +52,7 @@ namespace fms::iterable {
 	template<input I, input J>
 	constexpr J copy(I i, J j)
 	{
-		while (i) {
+		while (i && j) {
 			*j++ = *i++;
 		}
 
@@ -381,6 +381,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		constant(T c = 0) noexcept
 			: c(c)
@@ -396,6 +397,10 @@ namespace fms::iterable {
 			return true;
 		}
 		value_type operator*() const noexcept
+		{
+			return c;
+		}
+		reference operator*() noexcept
 		{
 			return c;
 		}
@@ -666,6 +671,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		once(T t) noexcept
 			: t(t), b(true)
@@ -678,6 +684,10 @@ namespace fms::iterable {
 			return b;
 		}
 		value_type operator*() const noexcept
+		{
+			return t;
+		}
+		reference operator*() noexcept
 		{
 			return t;
 		}
@@ -704,6 +714,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = typename I::value_type;
+		using reference = typename I::reference;
 
 		repeat(I i) noexcept
 			: i0(i), i(i)
@@ -716,6 +727,10 @@ namespace fms::iterable {
 			return true;
 		}
 		value_type operator*() const noexcept
+		{
+			return *i;
+		}
+		reference operator*() noexcept
 		{
 			return *i;
 		}
@@ -748,6 +763,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		take(const I& i, std::size_t n)
 			: i(i), n(n)
@@ -760,6 +776,10 @@ namespace fms::iterable {
 			return i && n > 0;
 		}
 		value_type operator*() const noexcept
+		{
+			return *i;
+		}
+		reference operator*() noexcept
 		{
 			return *i;
 		}
