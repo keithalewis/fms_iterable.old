@@ -3,7 +3,6 @@
 #include <execution>
 #include <functional>
 #include <initializer_list>
-#include <list>
 #include <numeric>
 #include <type_traits>
 #include <vector>
@@ -42,14 +41,22 @@ namespace fms::iterable {
 	constexpr bool equal(I i, J j) noexcept
 	{
 		while (i && j) {
-			if (*i != *j) {
+			if (*i++ != *j++) {
 				return false;
 			}
-			++i;
-			++j;
 		}
 
 		return !i && !j; // both done
+	}
+	
+	template<input I, input J>
+	constexpr J copy(I i, J j)
+	{
+		while (i) {
+			*j++ = *i++;
+		}
+
+		return j;
 	}
 
 	// length(i, length(j)) = length(i) + length(j)
@@ -201,85 +208,6 @@ namespace fms::iterable {
 	}
 
 	// TODO: remove???
-	// Value class.
-	template <class T>
-	class list {
-		std::list<T> l;
-	public:
-		using iterator_category = std::input_iterator_tag;
-		using value_type = T;
-
-		template <input I>
-			requires std::same_as<T, typename I::value_type>
-		list(I i)
-		{
-			while (i) {
-				l.push_back(*i);
-				++i;
-			}
-		}
-		// E.g., list({1,2,3})
-		list(const std::initializer_list<T>& l)
-			: l(l)
-		{ }
-
-		bool operator==(const list& _l) const = default;
-
-		auto begin() const
-		{
-			return l.begin();
-		}
-		auto end() const
-		{
-			return l.end();
-		}
-
-		explicit operator bool() const //override
-		{
-			return !l.empty();
-		}
-		value_type operator*() const //override
-		{
-			return l.front();
-		}
-		list& operator++() //override
-		{
-			if (operator bool()) {
-				l.pop_front();
-			}
-
-			return *this;
-		}
-
-		// std::list member function forwarding
-
-		list& push_back(const T& t)
-		{
-			l.push_back(t);
-
-			return *this;
-		}
-		list& push_back(T&& t)
-		{
-			l.push_back(t);
-
-			return *this;
-		}
-		template <class... Args>
-		list& emplace_back(Args&&... args)
-		{
-			l.emplace_back(args...);
-
-			return *this;
-		}
-	};
-	template <input I, class T = typename I::value_type>
-	inline auto make_list(I i)
-	{
-		return list<T>(i);
-	}
-
-	// TODO: remove???
 	// Value type.
 	template <class T>
 	class vector {
@@ -288,6 +216,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		vector()
 			: v{}, i(0)
@@ -353,7 +282,11 @@ namespace fms::iterable {
 		{
 			return i < v.size();
 		}
-		T operator*() const
+		value_type operator*() const
+		{
+			return v[i];
+		}
+		reference operator*() 
 		{
 			return v[i];
 		}
@@ -364,6 +297,14 @@ namespace fms::iterable {
 			}
 
 			return *this;
+		}
+		vector operator++(int)
+		{
+			auto _v{ *this };
+
+			operator++();
+
+			return _v;
 		}
 
 		// Multi-pass
@@ -635,6 +576,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		// pointer() is empty iterator
 		pointer(T* p = nullptr) noexcept
@@ -648,6 +590,10 @@ namespace fms::iterable {
 			return p != nullptr; // unsafe
 		}
 		value_type operator*() const noexcept
+		{
+			return *p;
+		}
+		reference operator*() noexcept
 		{
 			return *p;
 		}
@@ -675,6 +621,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using reference = T&;
 
 		null_terminated_pointer(T* p) noexcept
 			: p(p)
@@ -687,6 +634,10 @@ namespace fms::iterable {
 			return *p != 0;
 		}
 		value_type operator*() const noexcept
+		{
+			return *p;
+		}
+		reference operator*() noexcept
 		{
 			return *p;
 		}

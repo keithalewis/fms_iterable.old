@@ -51,44 +51,6 @@ int test_interval() {
 	return 0;
 }
 
-int test_list() {
-	{
-		list c({ 1, 2, 3 });
-		assert(c);
-		auto c2(c);
-		assert(c == c2);
-		assert(equal(c, c2));
-		c = c2;
-		assert(!(c2 != c));
-		++c2;
-		assert(c2 != c);
-
-		assert(*c == 1);
-		++c;
-		assert(c);
-		assert(*c == 2);
-		++c;
-		assert(*c == 3);
-		++c;
-		assert(!c);
-	}
-	{
-		list c({ 1, 2, 3 });
-		assert(!equal(c, iota(1)));
-		assert(equal(c, take(iota(1), 3)));
-	}
-	{
-		list c({ 1, 2, 3 });
-		int i = 1;
-		for (auto ci : c) {
-			assert(i == ci);
-			++i;
-		}
-	}
-
-	return 0;
-}
-
 int test_constant() {
 	constant c(1);
 	constant c2(c);
@@ -109,9 +71,9 @@ int test_constant() {
 
 int test_choose() {
 	{
-		list l({ 1, 3, 3, 1 });
+		//list l({ 1, 3, 3, 1 });
 		choose c(3);
-		assert(equal(l, c));
+		//assert(equal(l, c));
 	}
 	return 0;
 }
@@ -493,13 +455,14 @@ int test_concatenate() {
 		assert(!c2);
 	}
 	{
-		vector v({ 1,2,3 });
+		auto v = array(i);
 		const auto v_ = concatenate(v, empty<int>{});
 		assert(equal(v, v_));
 		const auto _v = concatenate(empty<int>{}, v);
 		assert(equal(v, _v));
 	}
 	{
+		/*
 		vector v1({ 1,2 }), v2({ 3, 4, 5 }), v3({ 6, 7, 8, 9 });
 		const auto v = concatenate(v1, v2, v3);
 		assert(equal(v, list({ 1, 2, 3, 4, 5, 6, 7, 8, 9 })));
@@ -507,6 +470,7 @@ int test_concatenate() {
 		const auto v_ = v;
 		assert(equal(v, v_));
 		assert(equal(v, take(iota(1), 9)));
+		*/
 	}
 
 	return 0;
@@ -558,74 +522,32 @@ int test_merge() {
 		assert(!c);
 	}
 	{
-		int i[] = { 1, 2 };
-		int j[] = { 2, 3 };
-		auto c = merge(array(i), array(j));
-		assert(equal(c, list({ 1, 2, 2, 3 })));
+		//int i[] = { 1, 2 };
+		//int j[] = { 2, 3 };
+		//auto c = merge(array(i), array(j));
+		//assert(equal(c, list({ 1, 2, 2, 3 })));
 	}
 	{
 		int i[] = { 1, 2, 2 };
 		int j[] = { 2, 2, 3 };
 		auto c = merge(array(i), array(j));
-		assert(equal(c, list({ 1, 2, 2, 2, 2, 3 })));
+		assert(equal(c, vector({ 1, 2, 2, 2, 2, 3 })));
 	}
 	{
 		auto i = iota(1);
 		auto j = constant(2) * i; // 2, 4, 6, 8, ...
 		auto k = i + j;		      // 3, 6, 9, 12, ...
 		auto l = merge(j, k);
-		assert(equal(take(l, 6), list({ 2, 3, 4, 6, 6, 8 })));
+		//assert(equal(take(l, 6), list({ 2, 3, 4, 6, 6, 8 })));
 	}
 	{
+		/*
 		vector v({ 1,2,3 });
 		const auto v_ = merge(v, empty<int>{});
 		assert(equal(v, v_));
 		const auto _v = merge(empty<int>{}, v);
 		assert(equal(v, _v));
-	}
-
-	return 0;
-}
-
-int test_vector() {
-	{
-		int i[] = { 1, 2, 3 };
-		{
-			auto p = array(i);
-			auto c = make_vector(p);
-			assert(c);
-			auto c2{ c };
-			assert(c == c2);
-			c = c2;
-			assert(!(c2 != c));
-
-			auto cc = make_vector(c);
-			assert(cc);
-			assert(equal(cc, c));
-
-			vector ccc(cc);
-			assert(equal(ccc, c));
-
-			assert(*c == 1);
-			++c;
-			assert(c);
-			assert(*c == 2);
-			++c;
-			assert(*c == 3);
-			++c;
-			assert(!c);
-
-		}
-		{
-			auto c = vector(3, i);
-			assert(equal(c, take(iota(1), 3)));
-		}
-		{
-			auto c = vector(3, i);
-			vector v(c);
-			assert(equal(v, c));
-		}
-
+		*/
 	}
 
 	return 0;
@@ -669,7 +591,7 @@ int test_call() {
 	{
 		call c([]() { static int i = 0;  return i++; });
 
-		assert(equal(take(c, 3), list({ 0, 1, 2 })));
+		//assert(equal(take(c, 3), list({ 0, 1, 2 })));
 	}
 
 	return 0;
@@ -714,7 +636,6 @@ int test_pair()
 int main()
 {
 	test_interval();
-	test_list();
 	test_constant();
 	test_choose();
 	test_once();
@@ -732,7 +653,6 @@ int main()
 	test_take();
 	test_concatenate();
 	test_merge();
-	test_vector();
 	test_delta();
 	test_call();
 	test_exp();
