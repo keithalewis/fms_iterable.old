@@ -307,6 +307,11 @@ namespace fms::iterable {
 			return _v;
 		}
 
+			operator++();
+
+			return _v;
+		}
+
 		// Multi-pass
 		vector& reset(size_t i_ = 0)
 		{
