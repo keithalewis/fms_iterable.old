@@ -353,6 +353,15 @@ int test_pointer() {
 		++p;
 		assert(!p);
 	}
+	{
+		int i[] = { 1, 2, 3 };
+		pointer p(i, 3);
+		int j = 1;
+		for (const auto& pi : p) {
+			assert(pi == j);
+			++j;
+		}
+	}
 
 	return 0;
 }
