@@ -320,20 +320,39 @@ int test_fold() {
 }
 
 int test_pointer() {
-	int i[] = { 1, 2, 3 };
-	pointer p(i);
-	pointer p2(p);
-	assert(p == p2);
-	p = p2;
-	assert(!(p2 != p));
+	{
+		int i[] = { 1, 2, 3 };
+		pointer p(i);
+		pointer p2(p);
+		assert(p == p2);
+		p = p2;
+		assert(!(p2 != p));
 
-	assert(p);
-	assert(*p == 1);
-	++p;
-	assert(*p == 2);
-	++p;
-	assert(*p == 3);
-	++p; // *p is undefined
+		assert(p);
+		assert(*p == 1);
+		++p;
+		assert(*p == 2);
+		++p;
+		assert(*p == 3);
+		++p; // *p is undefined
+	}
+	{
+		int i[] = { 1, 2, 3 };
+		pointer p(i, 3);
+		pointer p2(p);
+		assert(p == p2);
+		p = p2;
+		assert(!(p2 != p));
+
+		assert(p);
+		assert(*p == 1);
+		++p;
+		assert(*p == 2);
+		++p;
+		assert(*p == 3);
+		++p;
+		assert(!p);
+	}
 
 	return 0;
 }

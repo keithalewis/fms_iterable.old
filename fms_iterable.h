@@ -584,26 +584,36 @@ namespace fms::iterable {
 		}
 	};
 
-	// Unsafe pointer interface.
+	// Unsafe counted pointer interface with std::span semantics.
 	template <class T>
 	class pointer {
 		T* p;
+		size_t n;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
 		using difference_type = std::ptrdiff_t;
 
-		// pointer() is empty iterator
-		pointer(T* p = nullptr) noexcept
-			: p(p)
+		// possible unsafe
+		pointer(T* p, size_t n = std::numeric_limits<size_t>::max()) noexcept
+			: p(p), n(n)
 		{ }
 
 		bool operator==(const pointer& _p) const = default;
 
+		auto begin() const
+		{
+			return *this;
+		}
+		auto end() const
+		{
+			return pointer<T>(p + n, 0);
+		}
+
 		explicit operator bool() const noexcept
 		{
-			return p != nullptr; // unsafe
+			return n != 0; // possibly unsafe
 		}
 		value_type operator*() const noexcept
 		{
@@ -616,6 +626,9 @@ namespace fms::iterable {
 		pointer& operator++() noexcept
 		{
 			++p;
+			if (n > 0) {
+				--n;
+			}
 
 			return *this;
 		}
