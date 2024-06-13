@@ -48,17 +48,19 @@ namespace fms::iterable {
 
 		return !i && !j; // both done
 	}
-	
+	/*
 	template<input I, input J>
 	constexpr J copy(I i, J j)
 	{
 		while (i && j) {
-			*j++ = *i++;
+			*j = *i;
+			++i;
+			++j;
 		}
 
 		return j;
 	}
-
+	*/
 	// length(i, length(j)) = length(i) + length(j)
 	template <input I>
 	constexpr std::size_t length(I i, std::size_t n = 0) noexcept
@@ -112,7 +114,7 @@ namespace fms::iterable {
 	}
 
 	// For use with STL
-	template <class I>
+	template <input I>
 	constexpr I begin(I i)
 	{
 		if constexpr (has_begin<I>) {
@@ -154,6 +156,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = typename I::difference_type;
 
 		constexpr interval(I b, I e)
 			: b(b), e(e)
@@ -217,6 +220,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = typename std::vector<T>::difference_type;
 
 		vector()
 			: v{}, i(0)
@@ -307,11 +311,6 @@ namespace fms::iterable {
 			return _v;
 		}
 
-			operator++();
-
-			return _v;
-		}
-
 		// Multi-pass
 		vector& reset(size_t i_ = 0)
 		{
@@ -354,6 +353,7 @@ namespace fms::iterable {
 	struct empty {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		bool operator==(const empty&) const
 		{
@@ -387,6 +387,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = std::ptrdiff_t;
 
 		constant(T c = 0) noexcept
 			: c(c)
@@ -427,6 +428,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		iota(T t = 0) noexcept
 			: t(t)
@@ -466,6 +468,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		power(T t, T tn = 1)
 			: t(t), tn(tn)
@@ -505,6 +508,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		factorial(T t = 1)
 			: t(t), n(1)
@@ -544,6 +548,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		choose(T n)
 			: n(n), k(0), nk(1)
@@ -587,6 +592,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = std::ptrdiff_t;
 
 		// pointer() is empty iterator
 		pointer(T* p = nullptr) noexcept
@@ -632,6 +638,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = std::ptrdiff_t;
 
 		null_terminated_pointer(T* p) noexcept
 			: p(p)
@@ -677,6 +684,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = std::ptrdiff_t;
 
 		once(T t) noexcept
 			: t(t), b(true)
@@ -720,6 +728,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = typename I::value_type;
 		using reference = typename I::reference;
+		using difference_type = typename I::difference_type;
 
 		repeat(I i) noexcept
 			: i0(i), i(i)
@@ -769,12 +778,22 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
 		using reference = T&;
+		using difference_type = typename I::difference_type;
 
 		take(const I& i, std::size_t n)
 			: i(i), n(n)
 		{ }
 
 		bool operator==(const take& t) const = default;
+
+		auto begin() const
+		{
+			return i;
+		}
+		auto end() const
+		{
+			return std::next(i, n);
+		}
 
 		explicit operator bool() const noexcept
 		{
@@ -784,10 +803,12 @@ namespace fms::iterable {
 		{
 			return *i;
 		}
+		/*
 		reference operator*() noexcept
 		{
 			return *i;
 		}
+		*/
 		take& operator++() noexcept
 		{
 			if (n) {
@@ -822,6 +843,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::common_type_t<typename I0::difference_type, typename I1::difference_type>;
 
 		concatenate2() = default;
 		concatenate2(const I0& i0, const I1& i1)
@@ -881,6 +903,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::common_type_t<typename I0::difference_type, typename I0::difference_type>;
 
 		merge2(const I0& i0, const I1& i1)
 			: i0(i0), i1(i1)
@@ -983,6 +1006,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = void;
 
 		call(F&& f)
 			: f(f)
@@ -1004,13 +1028,15 @@ namespace fms::iterable {
 
 	// Apply a function to elements of an iterable.
 	// f(*i), f(*++i), f(*++i), ...
-	template <class F, input I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
+	template <class F, input I, class T = typename I::value_type, 
+		class U = std::invoke_result_t<F, T>>
 	class apply {
 		F f;
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
+		using difference_type = typename I::difference_type;
 
 		apply(const F& f, const I& i)
 			: f(f), i(i)
@@ -1074,7 +1100,8 @@ namespace fms::iterable {
 	// TODO: apply(f, *i0, *i1, ...), apply(f, {*++i0, *++i1, ...}), ...
 
 	// Apply a binary operation to elements of two iterable.
-	template <class BinOp, input I0, input I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type, class T = std::invoke_result_t<BinOp, T0, T1>>
+	template <class BinOp, input I0, input I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type, 
+		class T = std::invoke_result_t<BinOp, T0, T1>>
 	class binop {
 		BinOp op;
 		I0 i0;
@@ -1082,6 +1109,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		binop(const BinOp& op, I0 i0, I1 i1)
 			: op(op), i0(i0), i1(i1)
@@ -1159,6 +1187,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = typename I::difference_type;
 
 		filter(const filter& a)
 			: p(a.p), i(a.i)
@@ -1231,6 +1260,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = typename I::difference_type;
 
 		until(const P& p, const I& i)
 			: p(p), i(i)
@@ -1303,6 +1333,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
+		using difference_type = std::ptrdiff_t;
 
 		fold(const BinOp& op, const I& i, T t = 0)
 			: op(op), i(i), t(t)
@@ -1393,7 +1424,8 @@ namespace fms::iterable {
 	// inline auto horner(I i, T x, T t = 1)
 
 	// d(i[1], i[0]), d(i[2], i[1]), ...
-	template <input I, class T = typename I::value_type, class D = std::minus<T>, typename U = std::invoke_result_t<D, T, T>>
+	template <input I, class T = typename I::value_type, class D = std::minus<T>, 
+		typename U = std::invoke_result_t<D, T, T>>
 	class delta {
 		D d;
 		I i;
@@ -1409,6 +1441,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
+		using difference_type = std::ptrdiff_t;
 
 		delta(const I& _i, const D& _d = std::minus<T>{})
 			: d(_d), i(_i), t{}, _t{}
@@ -1487,6 +1520,7 @@ namespace fms::iterable {
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = std::pair<typename I::value_type, typename J::value_type>;
+		using difference_type = std::common_type<typename I::difference_type, typename J::difference_type>;
 
 		pair(I i, J j)
 			: i(i), j(j)

@@ -15,7 +15,7 @@ int test_interval() {
 		interval c(v.begin(), v.end());
 		auto c2(c);
 		assert(c == c2);
-		// c = c2; // cannot reseat const reference
+		c = c2;
 		assert(!(c2 != c));
 
 		assert(c);
@@ -32,7 +32,7 @@ int test_interval() {
 		std::vector v{ 1, 2, 3 };
 		interval c(v.begin(), v.end());
 		int i = 1;
-		for (auto ci : c) {
+		for (auto ci : c) { // range for
 			assert(i == ci);
 			++i;
 		}
@@ -50,7 +50,7 @@ int test_interval() {
 	{
 		int i[] = { 1,2,3 };
 		int j[3];
-		auto jj = copy(array(i), array(j));
+		std::copy(begin(array(i)), end(array(i)), pointer(j));
 		assert(equal(array(i), array(j)));
 	}
 
